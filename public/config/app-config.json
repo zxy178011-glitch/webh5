@@ -1,0 +1,9 @@
+{
+  "endpoints": {
+    "api": "http://43.138.49.60", 
+    "test": "http://localhost:9991/",
+    "auth": "https://auth.your-domain.com"
+  },
+  "defaultService": "api",
+  "timeoutMs": 15000
+}

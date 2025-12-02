@@ -1,0 +1,78 @@
+/* src/styles/effects.css */
+/* 关键帧：金币粒子 + 彩带坠落 */
+@keyframes celebrate {
+    0% {
+        transform: translate(-50%, -50%) scale(0) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(var(--rx), var(--ry)) scale(1) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+@keyframes confettiFall {
+    0% {
+        opacity: 1;
+        transform: translate(0, 0) rotate(0deg);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate(var(--rx), var(--ry)) rotate(720deg);
+    }
+}
+
+/* 金币粒子（JS 只负责插入一个 <div class="fx-particle"> 并写 --rx/--ry） */
+.fx-particle {
+    position: absolute;
+    top: 60%;
+    left: 50%;
+    width: 8px;
+    height: 8px;
+    background: #FFD54F;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 100;
+    animation: celebrate 1.2s ease-out forwards;
+}
+
+/* 彩带粒子 */
+.fx-confetti {
+    position: absolute;
+    top: 70%;
+    left: 50%;
+    width: 6px;
+    height: 12px;
+    background: var(--color, #FF5252);
+    border-radius: 1px;
+    pointer-events: none;
+    z-index: 200;
+    animation: confettiFall 1.8s ease-out forwards;
+}
+
+/* 可选：给 confetti 一组预设色，按需在 JS 写 --color 即可 */
+.fx-confetti:nth-child(6n+1) {
+    --color: #FF5252;
+}
+
+.fx-confetti:nth-child(6n+2) {
+    --color: #FFEB3B;
+}
+
+.fx-confetti:nth-child(6n+3) {
+    --color: #4CAF50;
+}
+
+.fx-confetti:nth-child(6n+4) {
+    --color: #2196F3;
+}
+
+.fx-confetti:nth-child(6n+5) {
+    --color: #FF9800;
+}
+
+.fx-confetti:nth-child(6n+6) {
+    --color: #9C27B0;
+}

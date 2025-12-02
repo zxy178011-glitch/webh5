@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    // 兼容现代浏览器 & Vite
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    // 关键：允许项目里同时存在 .js/.ts
+    "allowJs": true,
+    "checkJs": false, // 若想对 .js 也做类型检查可改成 true
+    "skipLibCheck": true,
+    // Vue / JSX / 模块隔离
+    "jsx": "preserve",
+    "isolatedModules": true,
+    // 严格与输出
+    "strict": true,
+    "noEmit": true,
+    // 路径别名（配合 Vite 的 @ -> src）
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    },
+    // 环境类型（Vite/Node）
+    "types": [
+      "vite/client",
+      "node"
+    ]
+  },
+  "include": [
+    "src/types/**/*.d.ts",
+    "env.d.ts",
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    "src/**/*.js" // 保证 .js 文件被 TS 服务识别
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/types" // 排除类型声明文件夹
+  ]
+}
