@@ -194,7 +194,7 @@ import {
     type SpinReq,
     type PrizeDto,
 } from '@/api/lottery/api'
-import { beginPageView } from '@/utils/YMDataH5Bridge'
+import { beginPageView, claim } from '@/utils/YMDataH5Bridge'
 /** ============== 类型定义 ============== */
 interface Prize { id: number; amount: string; isCenter?: boolean }
 interface SignDay { day: number; signed: boolean; label: string; reward: string }
@@ -418,6 +418,8 @@ onMounted(async () => {
                 displayAmount.value = '获得一次抽奖机会';
                 claimVideoRewardAsync({ clientRefId: data.transId }).then((() => {
                     loadTasks();
+                    //权益领取数据埋点
+                    claim({ task_id: 10006, benefit_type: '机会', claim_quantity: '一次' });
                 }));
             }
         })
