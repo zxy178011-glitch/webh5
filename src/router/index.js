@@ -42,14 +42,6 @@ const routes = [
     component: () => import('@/pages/yuyue/App.vue'),
     meta: { title: '预约' }
   },
-
-  // 红包相关
-  {
-    path: '/hongbao',
-    name: 'Hongbao',
-    component: () => import('@/pages/hongbao/App.vue'),
-    meta: { title: '红包' }
-  },
   {
     path: '/hongbaoyu',
     name: 'Hongbaoyu',
@@ -86,7 +78,10 @@ const routes = [
     path: '/MyEarnings',
     name: 'MyEarnings',
     component: () => import('@/pages/MyEarnings/App.vue'),
-    meta: { title: '我的收益' }
+    meta: {
+      keepAlive: true, // 页面添加缓存
+      title: '我的收益'
+    }
   },
 
   // 收益记录
@@ -94,7 +89,10 @@ const routes = [
     path: '/RevenueRecord',
     name: 'RevenueRecord',
     component: () => import('@/pages/RevenueRecord/App.vue'),
-    meta: { title: '收益记录' }
+    meta: {
+      keepAlive: true, // 页面添加缓存
+      title: '收益记录'
+    }
   },
 
   // 实名认证
@@ -108,7 +106,10 @@ const routes = [
     path: '/WithdrawProgress',
     name: 'WithdrawProgress',
     component: () => import('@/pages/RevenueRecord/WithdrawProgress.vue'),
-    meta: { title: '处理进度' }
+    meta: {
+      keepAlive: true, // 页面添加缓存
+      title: '处理进度'
+    }
   },
   // 404 页面
   {

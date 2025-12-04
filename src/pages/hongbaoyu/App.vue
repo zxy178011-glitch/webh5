@@ -88,7 +88,7 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, shallowRef, triggerRef } from 'vue'
 import { InsertSpark, ClaimWatchReward } from '../../api/public/api'
 import { showToast } from 'vant'
-
+import { beginPageView, claim } from '@/utils/H5Bridge'
 /* --------- 状态定义 --------- */
 const stage = ref('countdown')
 const count = ref(3)
@@ -393,6 +393,7 @@ function onWatchVideo() {
         dataObj.key = 'ShowVedioAD'
         dataObj.value = '10005'
         window.H5Bridge?.closePage?.(dataObj)
+        beginPageView('2', 'red_envelope_rain_pop_up');
     } catch { }
 }
 function onDirectReceive() {
@@ -406,6 +407,7 @@ function onDirectReceive() {
             window.H5Bridge?.closePage?.(dataObj)
         } catch { }
         showResult.value = false
+        beginPageView('2', 'red_envelope_rain_pop_up');
     })
 }
 function ClaimWatchRewards(model) {
@@ -414,6 +416,8 @@ function ClaimWatchRewards(model) {
             showResult.value = false
             showClaimSuccess.value = true;
             displayAmount.value = model.sparkCount;
+            //权益领取数据埋点
+            claim({ task_id: 10005, benefit_type: '金币', claim_quantity: model.sparkCount });
         } catch { }
     })
 }
@@ -424,7 +428,6 @@ function closeClaimPopup() {
     dataObj.value = ''
     window.H5Bridge?.closePage?.(dataObj)
 }
-
 onMounted(() => {
     const tickInterval = setInterval(() => {
         if (count.value <= 1) {
@@ -434,7 +437,7 @@ onMounted(() => {
             count.value--
         }
     }, 1000)
-
+    beginPageView('1', 'red_envelope_rain_pop_up');
     window.H5Bridge.on('pageRefresh', (data) => {
         if (!data?.userId || !data?.transId || !data?.taskId) return;
         if (data.taskId == 10005) {

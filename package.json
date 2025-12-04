@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "axios": "^1.12.2",
+    "unplugin-vue-define-options": "^3.1.1",
     "vant": "^4.9.21",
     "vconsole": "^3.15.1",
     "vue": "^3.5.21",

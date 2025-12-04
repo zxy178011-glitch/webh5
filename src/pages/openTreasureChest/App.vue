@@ -84,7 +84,7 @@ import { getChestState, postChestState } from '@/api/openTreasureChest/api'
 import { ClaimWatchReward } from '@/api/public/api'
 import { showDialog, showToast } from 'vant'
 import ClaimSuccessPopup from '@/components/Popup/SuccessPopup.vue'
-
+import { beginPageView, claim } from '@/utils/H5Bridge'
 const showOverlay = ref(true)
 const closing = ref(false)
 //领取成功弹框
@@ -132,27 +132,30 @@ function genVideoReward(min = 66, max = 266) {
 /** ===== 与后端同步：载入 / 保存 ===== */
 // 载入：从后端 Redis 获取（若无则由后端初始化）
 async function load() {
-    const data = await getChestState()
-    dayKey.value = data.dayKey
-    nextResetAt.value = data.nextResetAt
+    try {
+        const data = await getChestState()
+        dayKey.value = data.dayKey
+        nextResetAt.value = data.nextResetAt
 
-    const s = data.state
-    videoTeaserMax.value = s.videoTeaserMax ?? null
-    videoTeaserForIndex.value = s.videoTeaserForIndex ?? null
-    videoTeaserClaimed.value = s.videoTeaserClaimed ?? false // 新增
+        const s = data.state
+        videoTeaserMax.value = s.videoTeaserMax ?? null
+        videoTeaserForIndex.value = s.videoTeaserForIndex ?? null
+        videoTeaserClaimed.value = s.videoTeaserClaimed ?? false // 新增
 
-    // 规范化 amounts 的 key 为 number（后端可能下发 "1":1500）
-    const normalized: Record<number, number> = {}
-    Object.entries(s.amounts || {}).forEach(([k, v]) => {
-        const keyNum = Number(k)
-        const valNum = typeof v === 'number' ? v : Number(v ?? 0)
-        if (!Number.isNaN(keyNum)) normalized[keyNum] = valNum
-    })
+        // 规范化 amounts 的 key 为 number（后端可能下发 "1":1500）
+        const normalized: Record<number, number> = {}
+        Object.entries(s.amounts || {}).forEach(([k, v]) => {
+            const keyNum = Number(k)
+            const valNum = typeof v === 'number' ? v : Number(v ?? 0)
+            if (!Number.isNaN(keyNum)) normalized[keyNum] = valNum
+        })
 
-    openedCount.value = s.openedCount ?? 0
-    nextUnlockAt.value = s.nextUnlockAt ?? null
-    amounts.value = normalized
-    lastReward.value = s.lastReward ?? 0
+        openedCount.value = s.openedCount ?? 0
+        nextUnlockAt.value = s.nextUnlockAt ?? null
+        amounts.value = normalized
+        lastReward.value = s.lastReward ?? 0
+
+    } catch (e) { console.error(e) }
 }
 
 
@@ -353,20 +356,23 @@ async function ClaimWatchRewards(payload: { transId: string; userId: string; Spa
     // 使用锁防止并发
     isClaiming.value = true;
     try {
-        // 确保字段名和后端一致：这里使用 PascalCase SparkCount（与后端示例一致）
         const body = {
             transId: payload.transId,
             userId: payload.userId,
             SparkCount: payload.SparkCount ?? (videoTeaserMax.value ?? 266),
             bizType: 3
         };
-        // 这里假设 ClaimWatchReward 返回一个对象 { success: boolean, message?: string }
-        const res = await ClaimWatchReward(body);
-        // console.log('后台发放奖励 成功', res);
-        showClaimSuccess.value = true;
-        displayAmount.value = body.SparkCount;
-        //标记已领取
-        videoTeaserClaimed.value = true
+
+        await ClaimWatchReward(body).then((res => {
+            showClaimSuccess.value = true;
+            displayAmount.value = body.SparkCount;
+            //标记已领取
+            videoTeaserClaimed.value = true
+            //权益领取数据埋点
+            claim({ task_id: 10003, benefit_type: '金币', claim_quantity: body.SparkCount });
+        }));
+
+
     } catch (err) {
         console.error('ClaimWatchRewards 异常', err);
         showToast('领取异常，请稍后重试');
@@ -406,6 +412,9 @@ onMounted(() => {
         }
     })
     load()
+
+    //用户浏览开宝箱开始-数据埋点
+    beginPageView('1', 'chest_opening_pop_up')
     celebrating.value = false //  刷新进入页面不显示"恭喜"            
     //  从后端拿 Redis 状态（若无则初始化）
     videoMaxSpark.value = genVideoReward()
@@ -435,6 +444,8 @@ const onOutsideClose = async () => {
     try { (window as any).H5Bridge?.closePopup?.(dataObj) } catch { }
     //  关弹框就结束"恭喜"展示
     celebrating.value = false
+    //用户浏览开宝箱结束-数据埋点
+    beginPageView('2', 'chest_opening_pop_up')
 
     // closing.value = true
     setTimeout(() => { showOverlay.value = false }, 500)

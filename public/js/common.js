@@ -176,7 +176,6 @@
       payload: payload,
       ts: Date.now()
     };
-
     console.log('[H5Bridge] emit:', type, payload);
     return _sendToHost(msg);
   }
@@ -187,7 +186,7 @@
    * ⭐ 支持 iOS/Android/Flutter
    */
   function closePage(options = {}) {
-    console.log('[H5Bridge] closePage:', options);
+    // console.log('[H5Bridge] closePage:', options);
     return emit('closePage', options);
   }
 

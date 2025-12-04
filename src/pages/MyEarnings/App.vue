@@ -127,6 +127,11 @@ import {
     type WithdrawOptionDto,
     type WithdrawRequestDto
 } from '@/api/MyEarnings/api'
+import { beginPageView } from '@/utils/H5Bridge'
+import { onBeforeRouteLeave } from 'vue-router'
+
+/** 是否已上报开始埋点 */
+const hasReportedStart = ref(false)
 //领取成功弹框
 const showClaimSuccess = ref(false)
 const displayAmount = ref('')
@@ -143,7 +148,7 @@ onMounted(async () => {
     try {
         //  监听 Flutter 调用
         window.H5Bridge.on('pageRefresh', (data) => {
-            console.log('微信授权回值', data);
+            // console.log('微信授权回值', data);
             if (data?.businessType) {
                 if (data.businessType == 'wechatAuth') {
                     //微信授权成功刷新状态
@@ -181,7 +186,8 @@ onMounted(async () => {
         fetchWithdrawOptions(),
         fetchBindingStatus()
     ])
-
+    //用户浏览我的收益页面开始-数据埋点
+    beginPageView('1', 'my_earnings')
 })
 
 
@@ -232,7 +238,6 @@ const withdrawOptions = ref<Array<{
     condition: string
 }>>([])
 
-/** ===== API 调用方法 ===== */
 
 /**
  * 获取收益记录数据
@@ -474,6 +479,8 @@ const onClickLeft = () => {
     dataObj.value = '';
     dataObj.type = '';
     (window as any).H5Bridge?.closePage?.(dataObj)
+    //用户浏览我的收益页面结束-数据埋点
+    beginPageView('2', 'earnings_record')
 }
 
 /** ===== 规则弹窗 ===== */
@@ -1058,8 +1065,8 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 
     /* 选中状态 */
     &.is-selected {
-       // border-color: #FA6725;
-      //  box-shadow: 0 0 0 1px rgba(250, 103, 37, 0.08), 0 6px 12px rgba(250, 103, 37, 0.12);
+        // border-color: #FA6725;
+        //  box-shadow: 0 0 0 1px rgba(250, 103, 37, 0.08), 0 6px 12px rgba(250, 103, 37, 0.12);
         background: #FFF6F2;
 
         .value {

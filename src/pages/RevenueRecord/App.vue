@@ -83,8 +83,10 @@
     </div>
   </div>
 </template>
+<script>
 
-<script setup lang="ts">
+</script>
+<script setup lang="ts" name="RevenueRecord">
 import { ref, onMounted } from 'vue'
 import { getRevenueRecords, combinedRecordsDto } from '@/api/RevenueRecord/api'
 import { showToast } from 'vant'
@@ -92,10 +94,8 @@ import { useRouter } from 'vue-router'
 import RulePopup from '../../components/Popup/RulePopup.vue'
 import { windowHeight } from 'vant/lib/utils'
 import { it } from 'node:test'
+import { beginPageView } from '@/utils/H5Bridge'
 
-defineOptions({
-  name: 'RevenuePage'  // 组件名称,用于 keep-alive 缓存
-})
 
 const router = useRouter()
 
@@ -116,13 +116,10 @@ const initActiveTab = () => {
 }
 
 // 返回上一页
-const onClickLeft = () => {
-  // console.log('route11r', router)
+const onClickLeft = async () => {
+  //用户浏览收益记录页面结束-数据埋点
+  await beginPageView('2', 'earnings_record')
   router.back()
-  // dataObj.key = '';
-  // dataObj.value = '';
-  // dataObj.type = '';
-  // try { (window as any).H5Bridge?.closePopup?.(dataObj) } catch { }
 }
 
 /* ------------------------ 状态：顶部规则弹窗 ------------------------ */
@@ -131,16 +128,7 @@ const onClickLeft = () => {
 const showRule = ref(false)
 const ruleList = ref([
   '1.您可以通过完成本平台内提供的任务来获取火花或现金红包，具体的任务请参见围炉活动规则并以活动页面的指引为准。',
-  '2.完成任务后，系统更新您所获取的火花数量可能会有延迟。',
-  '3.火花每日凌晨前后会自动兑换成现金,兑换后的现金可提现。火花与现金的兑换比例大约为[33000:1]，兑换比例受每日广告收益影响可能有浮动，以实际为准。',
-  '4.您领取的火花、火花兑换的现金、已提现的现金等福利将在[我的收益/收益记录]页面中展示。您可通过在首页点击下方正中的[福利]，进入对应页面查看。',
-  '5.奖励领取方式分为平台自动发放奖励(即无需用户手动领取)和需用户手动领取奖励两种方式，具体以任务页面说明为准。对于需用户手动领取的奖励，用户应在限定时间内手动领取，若未及时领取，视为用户自愿放弃奖励，未领取的奖励将自动清零。',
-  '6.若用户连续15个自然日未进入任务页面、或连续15个自然日未领取任何活动奖励的(任一).那么此前本平台发放的所有福利将过期，逾期未提现则视为用户自愿放弃提现的权利，现金账户金额将被清零。',
-  '7.您通过平台举办的活动获得收益或奖励的，平台依法可能需要为用户代扣代缴税款或办理纳税申报。',
-  '8.我们应用先进的人工智能分析您的行为，如发现您的行为可能存在造假或其他不正当手段及舞弊行为、我们有权暂时中止您使用(领取火花、提现等福利选项)以及收回您获得的福利，具体可参考《围炉活动规则》"法律声明"之"禁止舞弊"条款。',
-  '9.本平台发放的火花仅用于在符合本规则的前提下在本平台兑换现金，以鼓励用户使用本平台，属于积分性质的促销手段。火花不可用于买卖、交换、支付等其他用途。',
-  '10.除本说明外，平台现行有效的的《用户协议》《隐私政策》以及日常活动规则(统称为"前述协议")同样适用。本说明及相关条款与前述协议相冲突的，以本说明为准;本说明未约定的内容，仍以前述协议为准。',
-  '11.在法律法规允许的范围内，平台有权对本说明进行变动或调整，相关变动或调整将公布在页面上，并于公布时即时生效，用户继续参与活动则视为同意并接受变动或者调整后的说明。如果用户拒绝说明的变更或者调整，请放弃参与变更后的活动。'
+
 ])
 const showRulePopup = () => {
   showRule.value = true
@@ -151,11 +139,11 @@ const fetchRevenueRecords = async () => {
   try {
     const res = await getRevenueRecords()
     if (res) {
-      console.log('res', res)
       revenueData.value = res
       sparkList.value = res.sparkList || []
       cashList.value = res.cashList || []
     }
+
   } catch (error) {
     console.error('获取收益记录失败:', error)
     showToast('获取数据失败')
@@ -227,6 +215,8 @@ const goToWithdraw = () => {
 onMounted(() => {
   initActiveTab()
   fetchRevenueRecords()
+  //用户浏览收益记录页面开始-数据埋点
+  beginPageView('1', 'earnings_record')
 })
 </script>
 

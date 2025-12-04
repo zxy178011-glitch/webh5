@@ -123,13 +123,13 @@
         </van-popup>
     </div>
 </template>
-
-<script setup lang="ts">
+ 
+<script setup lang="ts" name="WithdrawProgress">
 import { ref, onMounted, computed } from 'vue'
 import router from '../../router/index'
 import { useRoute } from 'vue-router'
 import { GetByIdAsync, GetbillIdData, getByOutBillNoAsync, DrawCashRecordDto } from '@/api/RevenueRecord/withdrawProgressapi'
-
+import { beginPageView } from '@/utils/H5Bridge'
 // 提现状态常量
 const WITHDRAW_STATUS = {
     PROCESSING: 1,  // 提现中(处理中)
@@ -358,6 +358,8 @@ const getDate = () => {
 onMounted(() => {
     initActiveTab()
     getDate()
+    //用户浏览提现进度页面开始-数据埋点
+    beginPageView('1', 'processing_progess')
     try {   //  监听 Flutter 调用
         window.H5Bridge.on('pageRefresh', (datas) => {
             console.log('qrsk回调监听', datas);
@@ -389,6 +391,8 @@ const initActiveTab = () => {
  */
 const onClickLeft = () => {
     router.back();
+    //用户浏览提现进度页面结束-数据埋点
+    beginPageView('2', 'processing_progess')
 }
 
 /**
