@@ -194,7 +194,7 @@ import {
     type SpinReq,
     type PrizeDto,
 } from '@/api/lottery/api'
-import { beginPageView, claim } from '@/utils/YMDataH5Bridge'
+import { beginPageView, claim, addOnClick } from '@/utils/YMDataH5Bridge'
 /** ============== 类型定义 ============== */
 interface Prize { id: number; amount: string; isCenter?: boolean }
 interface SignDay { day: number; signed: boolean; label: string; reward: string }
@@ -534,6 +534,8 @@ const onCenterCtaClick = async () => {
 
             // 开始跑
             runLoop()
+            //友盟数据埋点-用户点击时
+            addOnClick({ taskId: 10006, pageName: '点击去抽奖时' });
             // 更新页面数据
             freeLeftToday.value = res.freeLeftToday
             chanceLeft.value = res.chanceLeft

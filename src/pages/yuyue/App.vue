@@ -83,7 +83,7 @@
  */
 import { ref, reactive, computed, onMounted } from 'vue'
 import { IsReservedAsync, CreateActivityReservationAsync, ClaimRewardAsync, CreateReservationReminderAsync, GetEntityAsync } from '../../api/reservation/api.js'
-
+import { addOnClick } from '@/utils/YMDataH5Bridge.js'
 /** 状态集 */
 type State = 'RESERVE' | 'TOMORROW' | 'CLAIM'
 /** 事件集 */
@@ -256,6 +256,8 @@ async function onSetReminder() {
 // 一键预约
 async function onReserve() {
     if (loading.value || state.value !== 'RESERVE') return
+    //友盟数据埋点-用户点击时
+    addOnClick({ taskId: 10004, pageName: '点击一键预约时' });
     loading.value = true
     try {
         await CreateActivityReservationAsync({
@@ -274,6 +276,8 @@ async function onReserve() {
 async function onClaim() {
     if (loading.value || state.value !== 'CLAIM') return
     loading.value = true
+    //友盟数据埋点-用户点击时
+    addOnClick({ taskId: 10004, pageName: '点击一键领取时' });
     try {
         await ClaimRewardAsync()
         showClaimSuccess.value = true

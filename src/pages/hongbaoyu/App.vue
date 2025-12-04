@@ -88,7 +88,7 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, shallowRef, triggerRef } from 'vue'
 import { InsertSpark, ClaimWatchReward } from '../../api/public/api'
 import { showToast } from 'vant'
-import { beginPageView, claim } from '@/utils/YMDataH5Bridge'
+import { beginPageView, claim, addOnClick } from '@/utils/YMDataH5Bridge'
 /* --------- 状态定义 --------- */
 const stage = ref('countdown')
 const count = ref(3)
@@ -399,6 +399,8 @@ function onWatchVideo() {
 function onDirectReceive() {
     const model = { ObtainType: 5, ObtainCount: baseReward.value, ObtainContent: '红包雨获得' }
     const message = `+${baseReward.value}  火花`
+    //友盟数据埋点-用户点击时
+    addOnClick({ taskId: 10005, pageName: '点击火花红包雨去领取时' });
     InsertSpark(model).then((res) => {
         try {
             dataObj.key = 'showToast'

@@ -33,13 +33,13 @@ async function beginPageView(type, name) {
 }
 
 /**
- * 用户看完激励视频成功时
+ * 用户看完激励视频成功时数据埋点
  * @param {{task_id: string|number, benefit_type: string|number, claim_quantity: string|number}} data
  */
 async function claim(data = {}) {
     const payload = {
         ...baseObj,
-        value: `event=benefit_redemption&task_id=${data.task_id || ''}&benefit_type=${data.benefit_type || ''}&claim_quantity=${data.claim_quantity || 0}`
+        value: `eventId=benefit_redemption&task_id=${data.task_id || ''}&benefit_type=${data.benefit_type || ''}&claim_quantity=${data.claim_quantity || 0}`
     };
     try {
         const fn = window.H5Bridge?.closePage;
@@ -51,4 +51,24 @@ async function claim(data = {}) {
     }
 }
 
-export { beginPageView, claim };
+/**
+ * 用户点击事件数据埋点
+ * @param {string} task_id  
+ * @param {string} name 页面名称 (例如 '展示日常签到弹窗时' / '展示抽奖领取机会时')
+ */
+async function addOnClick(data = {}) {
+    const payload = {
+        ...baseObj,
+        value: `eventId=button_click&taskId=${data.taskId}&pageName=${data.pageName}`
+    };
+    try {
+        const fn = window.H5Bridge?.closePage;
+        if (typeof fn === 'function') {
+            await fn(payload);
+        }
+    } catch (err) {
+        console.error('addOnClick error', err);
+    }
+}
+
+export { beginPageView, claim, addOnClick };

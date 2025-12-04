@@ -84,7 +84,7 @@ import { getChestState, postChestState } from '@/api/openTreasureChest/api'
 import { ClaimWatchReward } from '@/api/public/api'
 import { showDialog, showToast } from 'vant'
 import ClaimSuccessPopup from '@/components/Popup/SuccessPopup.vue'
-import { beginPageView, claim } from '@/utils/YMDataH5Bridge'
+import { beginPageView, claim, addOnClick } from '@/utils/YMDataH5Bridge'
 const showOverlay = ref(true)
 const closing = ref(false)
 //领取成功弹框
@@ -340,7 +340,8 @@ async function openChest() {
         merge: true,
         state: { openedCount: openedCount.value, nextUnlockAt: nextUnlockAt.value, amounts: { [idx]: amt }, lastReward: amt }
     })
-
+    //友盟数据埋点-用户点击时
+    addOnClick({ taskId: 10003, pageName: '点击开宝箱得火花时' });
     await load()
 
     // 延迟关闭恭喜提示，防止立即点击

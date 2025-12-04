@@ -87,7 +87,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { getStatus, doSignin } from '../../api/signin/signinLog'
 import { showSuccessToast, showFailToast, showConfirmDialog, showToast } from 'vant'
-import { beginPageView, claim } from '@/utils/YMDataH5Bridge'
+import { beginPageView, claim, addOnClick } from '@/utils/YMDataH5Bridge'
 // ============ 参数（支持 URL 传参） ============
 const TASK_ID = Number(new URLSearchParams(location.search).get('task') || 10002)
 
@@ -326,14 +326,24 @@ async function bootstrap() {
 async function runAndRefresh(mode: 'normal' | 'retro' | 'reset', clientRefId: '') {
     buttonsDisabled.value = true
     const prev = lastStatus
+    const modeMap = {
+        normal: '签到',
+        retro: '续签',
+        reset: '重新签到'
+    };
     try {
+        //友盟数据埋点-用户点击时
+        addOnClick({ taskId: 10002, pageName: '点击去' + modeMap[mode] || '' + '时' });
+        //只有需要需要埋点权益领取
+        if (mode == 'retro') {
+            //权益领取数据埋点
+            claim({ task_id: 10002, benefit_type: '机会', claim_quantity: '一次' });
+        }
         await apiDoSignin(mode, clientRefId).then((cur => {
             applyStatus(cur)
             // 与原页保持：操作完成后进入“明日再来”视图（通常后端也会返回 SignedToday=true）
             state.signedToday = true
             showReward(rewardOf(prev, normalizeStatus(cur)))
-            //权益领取数据埋点
-            claim({ task_id: 10005, benefit_type: '机会', claim_quantity: '一次' });
         }))
     } catch (e: any) {
         console.log('error', (mode === 'retro' ? '续签失败：' : mode === 'reset' ? '重新签到失败：' : '签到失败：') + (e?.message || e || 'unknown error'))

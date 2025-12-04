@@ -127,7 +127,7 @@ import {
     type WithdrawOptionDto,
     type WithdrawRequestDto
 } from '@/api/MyEarnings/api'
-import { beginPageView } from '@/utils/YMDataH5Bridge'
+import { beginPageView, addOnClick } from '@/utils/YMDataH5Bridge'
 import { onBeforeRouteLeave } from 'vue-router'
 
 /** 是否已上报开始埋点 */
@@ -517,6 +517,8 @@ const handleTabClick = (name: string) => {
 const onTabChange = (name: string | number) => {
     const method = name === 'wechat' ? '微信' : '支付宝'
     showToast(`已切换至${method}提现`)
+    //友盟数据埋点-用户点击时
+    addOnClick({ taskId: 0, pageName: '点击' + method + '提现时' });
 }
 
 /**
@@ -565,7 +567,8 @@ const handleActionBtn = () => {
     }
     const option = currentSelectedOption.value
     if (!option) return
-
+    //友盟数据埋点-用户点击时
+    addOnClick({ taskId: 0, pageName: '点击提现按钮时' });
     // 根据条件类型处理
     switch (option.condition) {
         case 'video':
@@ -672,7 +675,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 <style scoped lang="scss">
 /* ================== 全局与页面基调 ================== */
 .myearnings-page {
-    min-height: 100vh;
+    min-block-size: 100vh;
     background-image: url('/img/MyEarnings/back.png');
     background-size: 474px auto;
     background-position: top center;
@@ -681,9 +684,9 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 
 .nav-bar {
     background: transparent;
-    padding-top: 45px;
-    padding-bottom: 5px;
-    // height: 88px;
+    padding-block-start: 45px;
+    padding-block-end: 5px;
+    // block-size: 88px;
 
     :deep(.van-nav-bar__arrow) {
         color: #1E1E1E;
@@ -711,7 +714,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
         font-size: 18px;
         line-height: 26px;
         color: #252525;
-        height: 44px;
+        block-size: 44px;
     }
 
     .rule-btn {
@@ -719,7 +722,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
         font-weight: 400;
         font-size: 14px;
         line-height: 100%;
-        text-align: right;
+        text-align: end;
         color: #252525;
         cursor: pointer;
     }
@@ -733,7 +736,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
    规则弹窗
    ========================================================================== */
 .rule-popup {
-    width: 320px;
+    inline-size: 320px;
     /* 300~340 自行调整 */
     padding: 16px 16px 14px;
     background: #fff;
@@ -742,7 +745,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 }
 
 .rule-title {
-    margin-bottom: 10px;
+    margin-block-end: 10px;
     text-align: center;
     font-size: 16px;
     font-weight: 600;
@@ -750,13 +753,13 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 }
 
 .rule-content {
-    max-height: 50vh;
+    max-block-size: 50vh;
     overflow: auto;
     padding: 6px 2px 10px;
 
     ol {
         margin: 0;
-        padding-left: 20px;
+        padding-inline-start: 20px;
     }
 
     li {
@@ -770,11 +773,11 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 .rule-actions {
     display: flex;
     justify-content: center;
-    margin-top: 6px;
+    margin-block-start: 6px;
 
     .btn.primary {
-        min-width: 120px;
-        height: 36px;
+        min-inline-size: 120px;
+        block-size: 36px;
         padding: 0 16px;
         border: 0;
         border-radius: 999px;
@@ -788,7 +791,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 
 /* 实名认证提示 */
 .myearnings-alert {
-    height: 40px;
+    block-size: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -835,7 +838,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
         font-family: PingFang SC;
         font-size: 12px;
         color: #252525;
-        margin-bottom: 1.6vw;
+        margin-block-end: 1.6vw;
         display: flex;
         align-items: center;
         gap: 1.06667vw;
@@ -843,7 +846,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
     }
 
     .amount {
-        text-align: left;
+        text-align: start;
         font-size: 32px;
         font-weight: bold;
         color: #1E1E1E;
@@ -873,7 +876,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
     overflow: hidden;
     box-shadow: none;
     position: relative;
-    height: 46px;
+    block-size: 46px;
 }
 
 .custom-tabs-nav {
@@ -882,13 +885,13 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
     padding: 0;
     display: flex;
     gap: 2px;
-    height: 100%;
+    block-size: 100%;
 }
 
 .custom-tab {
     flex: 1;
     margin: 0;
-    height: 46px;
+    block-size: 46px;
     background: transparent;
     color: #999;
     border: 0;
@@ -906,10 +909,10 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 .custom-tab:first-child::after {
     content: '';
     position: absolute;
-    right: -1px;
-    top: 0;
-    bottom: 0;
-    width: 2px;
+    inset-inline-end: -1px;
+    inset-block-start: 0;
+    inset-block-end: 0;
+    inline-size: 2px;
     background: linear-gradient(135deg, transparent 0%, transparent 45%, #E8E8E8 45%, #E8E8E8 55%, transparent 55%, transparent 100%);
     transform: skewX(-15deg);
     z-index: 1;
@@ -936,8 +939,8 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 .wechat-pay,
 .alipay {
     display: inline-block;
-    width: 16px;
-    height: 16px;
+    inline-size: 16px;
+    block-size: 16px;
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
@@ -967,8 +970,8 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 }
 
 .custom-tab:nth-child(1).custom-tab--active .wechat-pay {
-    width: 18px;
-    height: 18px;
+    inline-size: 18px;
+    block-size: 18px;
 }
 
 /* 第二个tab激活状态 */
@@ -985,8 +988,8 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 }
 
 .custom-tab:nth-child(2).custom-tab--active .alipay {
-    width: 18px;
-    height: 18px;
+    inline-size: 18px;
+    block-size: 18px;
 }
 
 /* 提现说明 */
@@ -995,7 +998,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
     font-size: 12px;
     color: #4D4D4D;
     padding: 12px 15px;
-    text-align: left;
+    text-align: start;
     font-weight: 400;
 }
 
@@ -1014,7 +1017,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
     text-align: center;
     position: relative;
     transition: all .2s ease;
-    height: 84px;
+    block-size: 84px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -1029,8 +1032,8 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 
     .badge {
         position: absolute;
-        top: 0;
-        left: 0;
+        inset-block-start: 0;
+        inset-inline-start: 0;
         background: linear-gradient(90.22deg, #F56D13 0.19%, #FDA045 99.82%);
         color: #FFFFFF;
         font-size: 10px;
@@ -1051,7 +1054,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
             font-weight: 400;
             font-size: 12px;
             line-height: 18px;
-            margin-left: 2px;
+            margin-inline-start: 2px;
         }
     }
 
@@ -1088,8 +1091,8 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 
 /* 操作按钮 */
 .action-btn {
-    height: 48px;
-    width: 245px;
+    block-size: 48px;
+    inline-size: 245px;
     background: #FA6725;
     border-radius: 6.66667vw;
     box-shadow: 0 0.8vw 2.66667vw rgba(255, 107, 53, 0.25);
@@ -1100,7 +1103,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding-top: 0;
+    padding-block-start: 0;
     cursor: pointer;
     text-align: center;
 
@@ -1123,7 +1126,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
         letter-spacing: 0px;
         text-align: center;
         color: #FFFFFF;
-        margin-bottom: 2px;
+        margin-block-end: 2px;
     }
 
     .btn-subtext {
@@ -1138,8 +1141,8 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 
 /* Vant 绑定弹框 */
 .success-popup {
-    width: 270px !important;
-    height: 185px !important;
+    inline-size: 270px !important;
+    block-size: 185px !important;
     background: #FFFFFF;
     border-radius: 16px !important;
     overflow: visible !important;
@@ -1175,11 +1178,11 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 
 /* 弹框主按钮 */
 .binding-btn {
-    width: 230px;
-    height: 42px;
+    inline-size: 230px;
+    block-size: 42px;
     font-size: 16px;
     font-weight: 600;
-    margin-top: 8px;
+    margin-block-start: 8px;
     background: #FA6725 !important;
     border: none !important;
 }
@@ -1192,12 +1195,12 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
     background-position: top center;
     background-repeat: no-repeat;
     position: absolute;
-    left: 50%;
-    top: calc(100% + clamp(8px, 2.5vh, 16px));
+    inset-inline-start: 50%;
+    inset-block-start: calc(100% + clamp(8px, 2.5vh, 16px));
     transform: translateX(-50%);
     z-index: 1001;
-    width: 26px;
-    height: 26px;
+    inline-size: 26px;
+    block-size: 26px;
     border-radius: 50%;
     color: #fff;
     font-size: 18px;

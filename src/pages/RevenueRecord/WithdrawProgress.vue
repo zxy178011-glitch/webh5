@@ -123,13 +123,13 @@
         </van-popup>
     </div>
 </template>
- 
+
 <script setup lang="ts" name="WithdrawProgress">
 import { ref, onMounted, computed } from 'vue'
 import router from '../../router/index'
 import { useRoute } from 'vue-router'
 import { GetByIdAsync, GetbillIdData, getByOutBillNoAsync, DrawCashRecordDto } from '@/api/RevenueRecord/withdrawProgressapi'
-import { beginPageView } from '@/utils/YMDataH5Bridge'
+import { beginPageView, addOnClick } from '@/utils/YMDataH5Bridge'
 // 提现状态常量
 const WITHDRAW_STATUS = {
     PROCESSING: 1,  // 提现中(处理中)
@@ -324,6 +324,8 @@ const goToWechatAuthorize = () => {
         return;
     }
     if (data.value?.billId) {
+        //友盟数据埋点-用户点击时
+        addOnClick({ taskId: 0, pageName: '点击确认收款时' });
         GetbillIdData({ BillId: data.value.billId }).then((res => {
             dataObj.key = 'wechatOpenBusiness';
             dataObj.type = 'wechatOpenBusiness';
