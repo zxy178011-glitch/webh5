@@ -88,7 +88,7 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, shallowRef, triggerRef } from 'vue'
 import { InsertSpark, ClaimWatchReward } from '../../api/public/api'
 import { showToast } from 'vant'
-import { beginPageView, claim } from '@/utils/H5Bridge'
+import { beginPageView, claim } from '@/utils/YMDataH5Bridge'
 /* --------- 状态定义 --------- */
 const stage = ref('countdown')
 const count = ref(3)
@@ -393,7 +393,7 @@ function onWatchVideo() {
         dataObj.key = 'ShowVedioAD'
         dataObj.value = '10005'
         window.H5Bridge?.closePage?.(dataObj)
-        beginPageView('2', 'red_envelope_rain_pop_up');
+        beginPageView('2', '展示红包雨弹窗时');
     } catch { }
 }
 function onDirectReceive() {
@@ -407,7 +407,7 @@ function onDirectReceive() {
             window.H5Bridge?.closePage?.(dataObj)
         } catch { }
         showResult.value = false
-        beginPageView('2', 'red_envelope_rain_pop_up');
+        beginPageView('2', '展示红包雨弹窗时');
     })
 }
 function ClaimWatchRewards(model) {
@@ -437,7 +437,7 @@ onMounted(() => {
             count.value--
         }
     }, 1000)
-    beginPageView('1', 'red_envelope_rain_pop_up');
+    beginPageView('1', '展示红包雨弹窗时');
     window.H5Bridge.on('pageRefresh', (data) => {
         if (!data?.userId || !data?.transId || !data?.taskId) return;
         if (data.taskId == 10005) {

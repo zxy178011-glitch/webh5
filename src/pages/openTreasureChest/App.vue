@@ -84,7 +84,7 @@ import { getChestState, postChestState } from '@/api/openTreasureChest/api'
 import { ClaimWatchReward } from '@/api/public/api'
 import { showDialog, showToast } from 'vant'
 import ClaimSuccessPopup from '@/components/Popup/SuccessPopup.vue'
-import { beginPageView, claim } from '@/utils/H5Bridge'
+import { beginPageView, claim } from '@/utils/YMDataH5Bridge'
 const showOverlay = ref(true)
 const closing = ref(false)
 //领取成功弹框
@@ -414,7 +414,7 @@ onMounted(() => {
     load()
 
     //用户浏览开宝箱开始-数据埋点
-    beginPageView('1', 'chest_opening_pop_up')
+    beginPageView('1', '展示开宝箱弹窗时')
     celebrating.value = false //  刷新进入页面不显示"恭喜"            
     //  从后端拿 Redis 状态（若无则初始化）
     videoMaxSpark.value = genVideoReward()
@@ -445,7 +445,7 @@ const onOutsideClose = async () => {
     //  关弹框就结束"恭喜"展示
     celebrating.value = false
     //用户浏览开宝箱结束-数据埋点
-    beginPageView('2', 'chest_opening_pop_up')
+    beginPageView('2', '展示开宝箱弹窗时')
 
     // closing.value = true
     setTimeout(() => { showOverlay.value = false }, 500)

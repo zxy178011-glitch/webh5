@@ -87,7 +87,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { getStatus, doSignin } from '../../api/signin/signinLog'
 import { showSuccessToast, showFailToast, showConfirmDialog, showToast } from 'vant'
-import { beginPageView, claim } from '@/utils/H5Bridge'
+import { beginPageView, claim } from '@/utils/YMDataH5Bridge'
 // ============ 参数（支持 URL 传参） ============
 const TASK_ID = Number(new URLSearchParams(location.search).get('task') || 10002)
 
@@ -359,7 +359,7 @@ function onOutsideClose() {
     dataObj.type = ''
     try { (window as any).H5Bridge?.closePopup?.(dataObj) } catch { }
     //用户浏览签到结束-数据埋点
-    beginPageView('2', 'check_in_pop_up')
+    beginPageView('2', '展示日常签到弹窗时')
     closing.value = true
     setTimeout(() => { visible.value = false }, 300)
 }
@@ -379,7 +379,7 @@ function onRetro() {
 onMounted(() => {
     bootstrap();
     //用户浏览签到开始-数据埋点
-    beginPageView('1', 'check_in_pop_up')
+    beginPageView('1', '展示日常签到弹窗时')
     //  监听 Flutter 调用
     window.H5Bridge.on('pageRefresh', (data) => {
         // console.log('老用户续签看激励视频返回值', data);

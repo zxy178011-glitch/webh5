@@ -127,7 +127,7 @@ import {
     type WithdrawOptionDto,
     type WithdrawRequestDto
 } from '@/api/MyEarnings/api'
-import { beginPageView } from '@/utils/H5Bridge'
+import { beginPageView } from '@/utils/YMDataH5Bridge'
 import { onBeforeRouteLeave } from 'vue-router'
 
 /** 是否已上报开始埋点 */
@@ -187,7 +187,7 @@ onMounted(async () => {
         fetchBindingStatus()
     ])
     //用户浏览我的收益页面开始-数据埋点
-    beginPageView('1', 'my_earnings')
+    beginPageView('1', '展示我的收益时')
 })
 
 
@@ -480,7 +480,7 @@ const onClickLeft = () => {
     dataObj.type = '';
     (window as any).H5Bridge?.closePage?.(dataObj)
     //用户浏览我的收益页面结束-数据埋点
-    beginPageView('2', 'earnings_record')
+    beginPageView('2', '展示我的收益时')
 }
 
 /** ===== 规则弹窗 ===== */

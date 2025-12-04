@@ -94,7 +94,7 @@ import { useRouter } from 'vue-router'
 import RulePopup from '../../components/Popup/RulePopup.vue'
 import { windowHeight } from 'vant/lib/utils'
 import { it } from 'node:test'
-import { beginPageView } from '@/utils/H5Bridge'
+import { beginPageView } from '@/utils/YMDataH5Bridge'
 
 
 const router = useRouter()
@@ -118,7 +118,7 @@ const initActiveTab = () => {
 // 返回上一页
 const onClickLeft = async () => {
   //用户浏览收益记录页面结束-数据埋点
-  await beginPageView('2', 'earnings_record')
+  await beginPageView('2', '展示收益记录时')
   router.back()
 }
 
@@ -216,7 +216,7 @@ onMounted(() => {
   initActiveTab()
   fetchRevenueRecords()
   //用户浏览收益记录页面开始-数据埋点
-  beginPageView('1', 'earnings_record')
+  beginPageView('1', '展示收益记录时')
 })
 </script>
 

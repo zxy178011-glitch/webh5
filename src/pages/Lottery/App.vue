@@ -194,7 +194,7 @@ import {
     type SpinReq,
     type PrizeDto,
 } from '@/api/lottery/api'
-import { beginPageView } from '@/utils/H5Bridge'
+import { beginPageView } from '@/utils/YMDataH5Bridge'
 /** ============== 类型定义 ============== */
 interface Prize { id: number; amount: string; isCenter?: boolean }
 interface SignDay { day: number; signed: boolean; label: string; reward: string }
@@ -299,7 +299,7 @@ function onClickLeft() {
     } catch { }
 
     //用户浏览抽奖页面结束-数据埋点
-    beginPageView('2', 'lucky_draw_pop_up')
+    beginPageView('2', '展示抽奖领取机会时')
 }
 
 const showRule = ref(false)
@@ -409,7 +409,7 @@ function applyStreakAndRecords(sr: StreakAndRecordsDto) {
 
 onMounted(async () => {
     loadTasks();
-    beginPageView('1', 'lucky_draw_pop_up');
+    beginPageView('1', '展示抽奖领取机会时');
     // 监听 Flutter 桥接
     try {
         window.H5Bridge.on('pageRefresh', (data) => {

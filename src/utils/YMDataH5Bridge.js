@@ -18,18 +18,12 @@ async function beginPageView(type, name) {
     const action = (String(type) === '1') ? 'beginPageView' : 'endPageView';
     const payload = {
         ...baseObj,
-        // 这里构造新的字符串（payload 是每次新的对象）
         value: `${action}=1&pageName=${name}`
     };
 
-    // 调试建议：用 JSON.stringify 输出快照
-    // console.log(JSON.stringify(payload));
-
     try {
-        // 如果 closePage 返回 Promise，则 await 等待它完成；如果不是 Promise，optional chaining 不会报错
         const fn = window.H5Bridge?.closePage;
         if (typeof fn === 'function') {
-            // 如果 closePage 是同步函数，这个 await 也不会有问题（会把非 Promise 值包成 resolved）
             await fn(payload);
         }
     } catch (err) {
@@ -47,9 +41,6 @@ async function claim(data = {}) {
         ...baseObj,
         value: `event=benefit_redemption&task_id=${data.task_id || ''}&benefit_type=${data.benefit_type || ''}&claim_quantity=${data.claim_quantity || 0}`
     };
-
-    // console.log(JSON.stringify(payload));
-
     try {
         const fn = window.H5Bridge?.closePage;
         if (typeof fn === 'function') {
