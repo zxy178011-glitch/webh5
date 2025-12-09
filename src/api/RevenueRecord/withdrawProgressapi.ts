@@ -20,7 +20,9 @@ export interface DrawCashRecordDto {
     //当前状态
     drawCashStatus: number,
     //商户订单号
-    billId: string
+    billId: string,
+    //失败原因
+    msg: string
 
 }
 export interface GetbillIdDataDto {

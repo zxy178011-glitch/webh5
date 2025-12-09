@@ -677,7 +677,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 .myearnings-page {
     min-block-size: 100vh;
     background-image: url('/img/MyEarnings/back.png');
-    background-size: 474px auto;
+    background-size: 390px auto;
     background-position: top center;
     background-repeat: no-repeat;
 }

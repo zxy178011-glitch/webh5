@@ -169,7 +169,8 @@ const formatDateStrict = (dateInput: string | Date | null | undefined): string =
 
 function toWithdrawProgress(item: combinedRecordsDto) {
   // 跳转到进度页面，传递 id
-  // if (item.drawCashStatus != 2)
+  if (item.drawCashStatus == 2)
+    return;
   router.push({
     path: '/WithdrawProgress',
     query: { Id: item.refId }

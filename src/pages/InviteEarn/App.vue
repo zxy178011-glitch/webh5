@@ -2,13 +2,13 @@
     <div class="inviteEarn-page">
 
 
-        <RulePopup v-model="showRule" title="规则" :rules="ruleList" confirmText="我知道了" />
+        <RulePopup v-model="showRule" title="说明" :rules="ruleList" confirmText="我知道了" />
         <!-- 头图占位（背景图已在容器上），用于控制可视高度 -->
         <div class="hero-space"> <!-- 顶部导航 -->
             <van-nav-bar fixed placeholder safe-area-inset-top left-arrow :border="false" class="nav-bar"
                 @click-left="onBack">
                 <template #right>
-                    <span class="nav-help" @click="showRulePopup">规则</span>
+                    <span class="nav-help" @click="showRulePopup">说明</span>
                 </template>
             </van-nav-bar>
         </div>
@@ -30,7 +30,7 @@
                 <div class="code">{{ inviteCode }}</div>
                 <div class="ops">
                     <button type="button" class="pill-btn" @click="copyInvite">复制</button>
-                    <button type="button" class="pill-btn" @click="fillInvite">填写邀请码</button>
+                    <button type="button" class="pill-btn aaa" @click="fillInvite">填邀请码</button>
                 </div>
             </div>
         </section>
@@ -69,7 +69,7 @@
 
             <div class="steps">
                 <div class="step" v-for="s in steps" :key="s.id">
-                    <div class="icon" :style="{ backgroundImage: `url(${s.icon})` }"></div>
+                    <div class="icon" :style="{ background: `url(${s.icon}) no-repeat top center / contain` }"></div>
                     <div class="title">{{ s.title }}</div>
                     <div class="desc" v-html="s.desc"></div>
                 </div>
@@ -145,7 +145,7 @@ import { onMounted, onBeforeUnmount, ref, computed } from "vue";
 import { showToast, showLoadingToast } from "vant";
 import { fetchInviteOverview, bindInvite } from "@/api/InviteEarn/api";
 import RulePopup from '../../components/Popup/RulePopup.vue'
- 
+
 
 //关闭页面通知移动端的数据
 const dataObj = { states: 0, page: 'InviteEarn', key: '', value: '', type: '' }
@@ -220,7 +220,7 @@ const nextOffset = ref(0);
 /* ------------------------ 三步说明（静态） ------------------------ */
 const steps = ref<Step[]>([
     { id: 1, icon: "/img/InviteEarn/yq.png", title: "邀请好友", desc: "分享口令给“围炉小说”新用户" },
-    { id: 2, icon: "/img/InviteEarn/xz.png", title: "好友下载并注册", desc: "好友通过邀请码登录“围炉小说”"},
+    { id: 2, icon: "/img/InviteEarn/xz.png", title: "好友下载并注册", desc: "好友通过邀请码登录“围炉小说”" },
     { id: 3, icon: "/img/InviteEarn/hh.png", title: "获得13万火花", desc: "发放<span class=\"em\">13万</span>火花，可查看火花收益" },
 ]);
 
@@ -510,9 +510,15 @@ defineExpose({
    顶部导航（覆盖在头图上，背景透明）
    ========================================================================== */
 .nav-bar {
-    background: transparent !important;
-    box-shadow: none;
-    border: none;
+    background: transparent;
+    padding-top: 45px;
+    padding-bottom: 5px;
+
+    :deep(.van-nav-bar__arrow) {
+        color: rgba(30, 30, 30, 1); // 修改颜色
+        font-size: 22px; // 修改大小
+        font-weight: bold; // 加粗（可选）
+    }
 
     :deep(.van-icon) {
         color: #fff;
@@ -657,6 +663,7 @@ defineExpose({
 
             &.right {
                 align-items: flex-start;
+                padding-left: 10px;
 
                 /* 右侧线头朝内 */
                 .h-line {
@@ -708,7 +715,8 @@ defineExpose({
     }
 
     .pill-btn {
-        padding: 8px 14px;
+        width: 48px;
+        height: 28px;
         border: 1px solid #eee;
         background: #fff;
         color: #252525;
@@ -720,6 +728,14 @@ defineExpose({
         font-weight: 600;
         box-shadow: 0 2px 6px rgba(0, 0, 0, .05);
     }
+
+    .pill-btn.aaa {
+        z-index: 2;
+        width: 68px;
+        /* 不要随意用 !important */
+        height: 28px;
+    }
+
 }
 
 /* 极小屏：按钮换行避免挤压邀请码 */
@@ -845,16 +861,16 @@ defineExpose({
         }
 
         .icon {
-            width: 40px;
-            height: 40px;
+            width: 32px;
+            height: 32px;
             margin: 0 auto 6px;
-            background: #fff center/contain no-repeat;
-            border-radius: 15px;
-            box-shadow: 0 2px 8px rgba(255, 158, 68, 0.25);
+            // background: #fff center/contain no-repeat;
+            // border-radius: 15px;
+            // box-shadow: 0 2px 8px rgba(255, 158, 68, 0.25);
         }
 
         .title {
-            font-size: 12px !important;
+            font-size: 13px !important;
             font-weight: 600;
             color: rgba(133, 61, 33, 1);
             line-height: 18px;

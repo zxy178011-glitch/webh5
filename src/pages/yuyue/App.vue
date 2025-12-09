@@ -1,15 +1,18 @@
 <template>
     <div class="page">
         <!-- 顶部返回按钮 -->
-        <button class="back-btn" aria-label="返回" @click="goBack">
+        <!-- <button class="back-btn" aria-label="返回" @click="goBack">
             <van-icon name="arrow-left" class="back-icon" />
-        </button>
-
+        </button> -->
+        <!-- 顶部导航栏 -->
+        <van-nav-bar left-arrow @click-left="goBack" safe-area-inset-top class="nav-bar">
+           
+        </van-nav-bar>
         <!-- 贴底内容 -->
         <div class="bottom">
             <div class="reward">
                 <div class="reward-header">
-                    <img src="/img/yuyue/金币.png" alt="火花图标" class="icon-img">
+                    <div class="icon-img"> </div>
                     <div class="reward-label">本轮奖励</div>
                 </div>
                 <div class="amt">
@@ -20,21 +23,20 @@
 
             <div class="bu">
                 <!-- 一键预约（RESERVE） -->
-                <van-button v-if="state === 'RESERVE'" type="danger" class="cta" round block :loading="loading"
+                <div v-if="state === 'RESERVE'" type="danger" class="cta" round block :loading="loading"
                     @click="onReserve">
-                    一键预约
-                </van-button>
+                    <div class="reserve-img"></div>
+                </div>
 
                 <!-- 明日领取（TOMORROW） -->
-                <van-button v-if="state === 'TOMORROW'" type="default" class="cta tomorrow-btn" round block disabled>
-                    明日领取
-                </van-button>
+                <div v-if="state === 'TOMORROW'" class="cta cta-disabled" type="default" round block disabled>
+                    <div class="tomorrow-img"></div>
+                </div>
 
                 <!-- 立即领取（CLAIM） -->
-                <van-button v-if="state === 'CLAIM'" type="danger" class="cta claim-btn" round block :loading="loading"
-                    @click="onClaim">
-                    立即领取
-                </van-button>
+                <div v-if="state === 'CLAIM'" type="danger" class="cta" round block :loading="loading" @click="onClaim">
+                    <div class="claim-img"></div>
+                </div>
             </div>
             <div class="tip">{{ tipText }}</div>
         </div>
@@ -43,7 +45,7 @@
         <van-popup v-model:show="showReserveSuccess" class="success-popup" round>
             <div class="popup-content">
                 <div class="popup-img">
-                    <van-image class="check-img" src="/img/yuyue/√.png" />
+
                 </div>
                 <div class="popup-title">恭喜预约成功</div>
                 <div class="popup-desc">记得明日来领奖励，过期将失效</div>
@@ -60,7 +62,7 @@
         <van-popup v-model:show="showClaimSuccess" class="success-popup1" round>
             <div class="popup-content">
                 <div class="popup-img1">
-                    <van-image class="check-img1" src="/img/yuyue/Claimtopimg.png" />
+                    <div class="check-img1"></div>
                 </div>
                 <div class="popup-title">恭喜您获得奖励</div>
                 <div class="popup-desc1">
@@ -356,7 +358,7 @@ defineExpose({
 </script>
 
 
-<style scoped>
+<style scoped lang="scss">
 /* 顶部返回按钮（Back） */
 .back-btn {
     position: fixed;
@@ -480,6 +482,28 @@ defineExpose({
     }
 }
 
+.nav-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: transparent;
+    padding-top: 45px;
+    padding-bottom: 5px;
+
+  
+     :deep(.van-nav-bar__arrow) {
+        color: #1E1E1E;
+        font-size: 22px;
+        font-weight: bold;
+    }
+
+    &::after {
+        display: none !important;
+    }
+
+}
+
 /* 底部容器（Bottom） */
 .bottom {
     padding: 16px 20px calc(60px + env(safe-area-inset-bottom));
@@ -524,6 +548,35 @@ defineExpose({
     gap: 8px;
 }
 
+.icon-img {
+    /* 背景设置  */
+    background-image: url('/img/yuyue/金币.png');
+    background-repeat: no-repeat;
+    background-size: cover;
+    /* 保持cover确保完全覆盖 */
+    background-position: center center;
+    /* 居中定位更稳定 */
+    background-attachment: scroll;
+    width: 44px;
+    height: 38px;
+}
+
+.reward-label {
+    width: 72px;
+    height: 25px;
+    top: 558px;
+    left: 159px;
+    opacity: 1;
+    font-family: PingFang SC;
+    font-weight: 500;
+    font-style: Medium;
+    font-size: 16px;
+    leading-trim: NONE;
+    line-height: 100%;
+    letter-spacing: 0px;
+    color: #903903;
+}
+
 .amt {
     display: inline-flex;
     align-items: baseline;
@@ -532,16 +585,17 @@ defineExpose({
 }
 
 .num {
-    font-size: clamp(28px, 9vw, 44px);
+    font-size: 48px;
     color: #F20021;
     font-weight: 700;
     line-height: 1;
 }
 
 .unit {
-    font-size: clamp(14px, 4vw, 18px);
+    font-size: 18px;
     color: #F20021;
     font-weight: 600;
+    padding-bottom: 5px
 }
 
 @media (max-width: 320px) {
@@ -562,18 +616,44 @@ defineExpose({
 }
 
 .cta {
-    height: 48px;
-    font-size: 18px;
-    font-weight: 800;
-    width: 227px;
-    box-sizing: border-box;
-    border: 2px solid;
-    border-image-source: linear-gradient(101.31deg, #FFDA7C 10.89%, #FFFFFF 35%) !important;
-    background: linear-gradient(90deg, #FF7523 0%, #FF29BD 100%) !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 59px;
+    width: 233px;
+    border: none;
+    background: url('/img/yuyue/按钮背景.png') no-repeat center center / contain !important;
     user-select: none;
 }
 
+/* 针对明日再领状态的半透明样式 */
+.cta-disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    /* 鼠标悬停显示禁止符号（PC端调试有用） */
+    pointer-events: none;
+    /* 禁止点击事件，防止误触 */
+    filter: saturate(0.8);
+    /* 可选：稍微降低一点饱和度，显得更像“置灰” */
+}
 
+.reserve-img {
+    width: 93px;
+    height: 88px;
+    background: url('/img/yuyue/一键预约.png') no-repeat center center / contain !important;
+}
+
+.tomorrow-img {
+    width: 93px;
+    height: 88px;
+    background: url('/img/yuyue/明日再领.png') no-repeat center center / contain !important;
+}
+
+.claim-img {
+    width: 93px;
+    height: 88px;
+    background: url('/img/yuyue/立即领取.png') no-repeat center center / contain !important;
+}
 
 /* 明日领取（禁用态但保留颜色） */
 .tomorrow-btn {
@@ -623,7 +703,7 @@ defineExpose({
 .success-popup {
     width: 280px !important;
     height: 230px !important;
-    background: #FFF5E6;
+    background: linear-gradient(180deg, #FBEED2 0%, #FFFFFF 100%);
     border-radius: 16px !important;
     overflow: visible !important;
 }
@@ -658,12 +738,16 @@ defineExpose({
 .check-img1 {
     width: 270px;
     height: 156px;
+    background-image: url('/img/yuyue/Claimtopimg.png');
+    background-repeat: no-repeat;
+    background-size: cover;
 }
 
-.check-img {
+.popup-img {
     width: 76px;
     height: 78px;
     margin-top: -61px;
+    background: url('/img/yuyue/√.png') no-repeat center center / contain;
 }
 
 /* 文案 */
@@ -700,8 +784,8 @@ defineExpose({
 .popup-button {
     width: 208px;
     height: 42px;
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 500;
     margin-top: 8px;
     background: #FA6725 !important;
     border: none !important;

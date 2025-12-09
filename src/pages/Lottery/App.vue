@@ -659,7 +659,8 @@ const onIKnow = () => {
 .nav-bar {
 
     background: transparent;
-    padding-top: 35px;
+    padding-top: 45px;
+    padding-bottom: 5px;
 
     :deep(.van-nav-bar__arrow) {
         color: rgba(30, 30, 30, 1); // 修改颜色

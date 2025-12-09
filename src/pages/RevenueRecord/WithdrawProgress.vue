@@ -40,14 +40,21 @@
                         <div class="dashed-line"></div>
                     </div>
                     <div class="timeline-right">
-                        <div class="step-title-row">
-                            <span class="step-title">{{ processingTitle }}</span>
-                            <img style="margin-left: 6px;" :src="platformIconmin" class="platform-icon-min" alt="" />
-                        </div>
-                        <div class="step-desc">
-                            <div v-if="currentStatus == 3">审核未通过</div>
-                            <div v-else-if="currentStatus == 5 || currentStatus == 2">审核通过,请进行下一步操作</div>
-                            <div v-else>提现高峰期间,5个工作日内到账</div>
+                        <div class="result-row">
+                            <div class="step-title-row">
+                                <span class="step-title">{{ processingTitle }}</span>
+                                <img style="margin-left: 6px;" :src="platformIconmin" class="platform-icon-min"
+                                    alt="" />
+                                <div v-if="currentStatus == 3" class="step-time">
+                                    审核未通过
+                                </div>
+                            </div>
+                            <div class="step-desc">
+                                <div v-if="currentStatus == 3" class="view-reason" @click="showReasonDialog">
+                                    查看原因
+                                    <van-icon name="arrow" />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -91,7 +98,7 @@
                                         {{ resultTitle }}
                                     </div>
                                 </div>
-                                <div v-if="currentStatus == 2" class="step-time">
+                                <div v-if="currentStatus == 2 || currentStatus == 4" class="step-time">
                                     {{ data?.modifyDate }}
                                 </div>
                                 <div class="step-time" v-else>待入账,请耐心等待</div>
@@ -118,7 +125,7 @@
             <div class="agreement-popup">
                 <van-nav-bar left-arrow @click-left="showReason = false" safe-area-inset-top class="nav-bar">
                 </van-nav-bar>
-                <div class="drawCashContent">{{ data?.drawCashContent }}</div>
+                <div class="drawCashContent">{{ data?.msg }}</div>
             </div>
         </van-popup>
     </div>
