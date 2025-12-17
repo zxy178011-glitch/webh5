@@ -1,114 +1,138 @@
 <template>
-    <div class="myearnings-page">
+    <div class="app">
+        <div class="myearnings-page">
 
-        <RulePopup v-model="showRule" title="规则" :rules="ruleList" confirmText="我知道了" />
-        <!-- 顶部导航栏 -->
-        <van-nav-bar left-arrow @click-left="onClickLeft" safe-area-inset-top class="nav-bar">
-            <template #title>
-                <span class="nav-title">我的收益</span>
-            </template>
-            <template #right>
-                <span class="rule-btn" @click="showRulePopup">规则</span>
-            </template>
-        </van-nav-bar>
+            <RulePopup v-model="showRule" title="规则" :rules="ruleList" confirmText="我知道了" />
+            <van-nav-bar left-arrow @click-left="onClickLeft" safe-area-inset-top class="nav-bar">
+                <template #title>
+                    <span class="nav-title">我的收益</span>
+                </template>
+                <template #right>
+                    <span class="rule-btn" @click="showRulePopup">规则</span>
+                </template>
+            </van-nav-bar>
 
-        <div class="page-content">
-            <!-- 实名认证提示 -->
-            <div class="myearnings-alert" @click="goToAuth" v-if="!userBindings.isRealNameAuthenticated">
-                <van-icon name="info-o" />
-                <span>点击进行实名认证，提现更安心</span>
-                <van-icon name="arrow" />
-            </div>
-
-            <!-- 收益展示卡片 -->
-            <div class="earnings-card">
-                <div class="earnings-row">
-                    <div class="earnings-item" @click="goToRevenueRecord('spark')">
-                        <div class="label">火花收益 (火花) <van-icon name="arrow" size="12" /></div>
-                        <div class="amount">{{ earnings.spark }}</div>
-                    </div>
-                    <div class="earnings-item" @click="goToRevenueRecord('cash')">
-                        <div class="label">现金收益 (元) <van-icon name="arrow" size="12" /></div>
-                        <div class="amount">{{ earnings.cash.toFixed(2) }}</div>
-                    </div>
+            <div class="page-content">
+                <div class="myearnings-alert" @click="goToAuth" v-if="!userBindings.isRealNameAuthenticated">
+                    <van-icon name="info-o" />
+                    <span>点击进行实名认证，提现更安心</span>
+                    <van-icon name="arrow" />
                 </div>
-            </div>
 
-            <!-- 白色内容卡片 -->
-            <div class="content-card">
-                <!-- 自定义 Tab 切换 - 胶囊风格 -->
-                <div class="custom-tabs capsule">
-                    <div class="custom-tabs-wrap">
-                        <div class="custom-tabs-nav">
-                            <div :class="['custom-tab', { 'custom-tab--active': activeTab === 'wechat' }]"
-                                @click="handleTabClick('wechat')">
-                                <div class="tab-title">
-                                    <span class="wechat-pay"></span>
-                                    <span>微信</span>
-                                </div>
-                            </div>
-                            <div :class="['custom-tab', { 'custom-tab--active': activeTab === 'alipay' }]"
-                                @click="handleTabClick('alipay')">
-                                <div class="tab-title">
-                                    <span class="alipay"></span>
-                                    <span>支付宝</span>
-                                </div>
-                            </div>
+                <div class="earnings-card">
+                    <div class="earnings-row">
+                        <div class="earnings-item" @click="goToRevenueRecord('spark')">
+                            <div class="label">火花收益 (火花) <van-icon name="arrow" size="12" /></div>
+                            <div class="amount">{{ earnings.spark }}</div>
+                        </div>
+                        <div class="earnings-item" @click="goToRevenueRecord('cash')">
+                            <div class="label">现金收益 (元) <van-icon name="arrow" size="12" /></div>
+                            <div class="amount">{{ earnings.cash.toFixed(2) }}</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 提现说明 -->
-                <div class="withdraw-tips">
-                    23点到次日11点为提现高峰期，可能会延迟到账
-                </div>
+                <div class="content-card">
+                    <div class="custom-tabs capsule">
+                        <div class="custom-tabs-wrap">
+                            <div class="custom-tabs-nav">
+                                <div :class="['custom-tab', { 'custom-tab--active': activeTab === 'alipay' }]"
+                                    @click="handleTabClick('alipay')">
+                                    <div class="tjpay">推荐</div>
+                                    <div class="tab-title">
+                                        <span class="alipay"></span>
+                                        <span>支付宝</span>
+                                    </div>
+                                </div>
+                                <div :class="['custom-tab', { 'custom-tab--active': activeTab === 'wechat' }]"
+                                    @click="handleTabClick('wechat')">
+                                    <div class="tab-title">
+                                        <span class="wechat-pay"></span>
+                                        <span>微信</span>
+                                    </div>
+                                </div>
 
-                <!-- 加载状态 -->
-                <van-loading v-if="loading" type="spinner" class="loading-container">加载中...</van-loading>
-
-                <!-- 提现金额网格（每行3列） -->
-                <div v-else class="amount-grid">
-                    <div v-for="(opt, idx) in withdrawOptions" :key="idx" :class="[
-                        'amount-option',
-                        opt.amount >= 20 ? 'large' : 'small',
-                        {
-                            'highlight': opt.highlight,
-                            'is-selected': selectedIndex === idx,
-                            'is-disabled': isDisabled(opt)
-                        }
-                    ]" @click="onSelect(opt, idx)">
-                        <span v-if="opt.badge" class="badge" :class="{ limited: opt.badge === '限时' }">
-                            {{ opt.badge }}
-                        </span>
-
-                        <div class="value">
-                            {{ opt.amount.toFixed(2) }}<span class="unit">元</span>
+                            </div>
                         </div>
-                        <div class="desc" v-if="opt.desc">{{ opt.desc }}</div>
+                    </div>
+
+                    <div class="withdraw-tips">
+                        {{ withdrawtips }}
+                    </div>
+
+                    <van-loading v-if="loading" type="spinner" class="loading-container">加载中...</van-loading>
+
+                    <div v-else class="amount-grid">
+                        <div v-for="(opt, idx) in withdrawOptions" :key="idx" :class="[
+                            'amount-option',
+                            opt.amount >= 20 ? 'large' : 'small',
+                            {
+                                'highlight': opt.highlight,
+                                'is-selected': selectedIndex === idx,
+                                'is-disabled': isDisabled(opt)
+                            }
+                        ]" @click="onSelect(opt, idx)">
+                            <span v-if="opt.badge" class="badge" :class="{ limited: opt.badge === '限时' }">
+                                {{ opt.badge }}
+                            </span>
+
+                            <div class="value">
+                                {{ opt.amount.toFixed(2) }}<span class="unit">元</span>
+                            </div>
+                            <div class="desc" v-if="opt.desc">{{ opt.desc }}</div>
+                        </div>
+                    </div>
+
+                    <div class="action-btn" :class="{ 'is-disabled': isActionBtnDisabled }" @click="handleActionBtn">
+                        <div class="btn-text">{{ actionBtnText }}</div>
+                        <div class="btn-subtext">{{ actionBtnSubtext }}</div>
                     </div>
                 </div>
-
-                <!-- 操作按钮 -->
-                <div class="action-btn" :class="{ 'is-disabled': isActionBtnDisabled }" @click="handleActionBtn">
-                    <div class="btn-text">{{ actionBtnText }}</div>
-                    <div class="btn-subtext">{{ actionBtnSubtext }}</div>
-                </div>
             </div>
+
+            <van-popup v-model:show="showBindingPopup" class="custom-pink-popup" round :close-on-click-overlay="false">
+                <div class="popup-wrapper">
+                    <div class="content-top">
+                        <h3 class="pop-title">{{ bindingInfo.title }}</h3>
+                        <div class="pop-message">{{ bindingInfo.message }}</div>
+                    </div>
+                    <div class="content-bottom">
+                        <van-button class="action-btn-main" round block @click="handleGoBinding(bindingMethod)">
+                            {{ bindingMethod === 'wechat' ? '去微信绑定' : '去支付宝绑定' }}
+                        </van-button>
+                    </div>
+                </div>
+                <button class="outside-close-btn" @click="handleCloseBindingPopup"></button>
+            </van-popup>
+
+            <van-popup v-model:show="showAuthPopup" class="custom-pink-popup" round :close-on-click-overlay="false">
+                <div class="popup-wrapper">
+                    <div class="content-top">
+                        <h3 class="pop-title">实名认证</h3>
+                        <div class="pop-message">
+                            完成实名认证后，提现更快更安全！<br>
+                        </div>
+                    </div>
+                    <div class="content-bottom">
+                        <!-- <van-button class="action-btn-main" round block @click="handleGoRealNameAuth">
+                            去认证
+                        </van-button> -->
+                        <div class="confirm-btns">
+                            <button class="btn btn-cancel" @click="showAuthPopup = false">
+                                取消
+                            </button>
+                            <button class="btn btn-confirm" @click="handleGoRealNameAuth">
+                                去认证
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- <button class="outside-close-btn" @click="showAuthPopup = false"></button> -->
+            </van-popup>
+
         </div>
-
-        <!-- 绑定弹框 -->
-        <van-popup v-model:show="showBindingPopup" class="success-popup" round>
-            <div class="popup-content">
-                <h3 class="binding-title">{{ bindingInfo.title }}</h3>
-                <div class="binding-message">{{ bindingInfo.message }}</div>
-                <van-button type="danger" class="binding-btn" round block @click="handleGoBinding(bindingMethod)">
-                    {{ bindingMethod === 'wechat' ? '去微信绑定' : '去支付宝绑定' }}
-                </van-button>
-            </div>
-            <button class="outside-close" type="button" aria-label="Close" @click="handleCloseBindingPopup"></button>
-        </van-popup>
+        <SuccessPopup v-model:visible="showClaimSuccess" :displayAmount="displayAmount" @close="closeClaimPopup" />
     </div>
-    <SuccessPopup v-model:visible="showClaimSuccess" :displayAmount="displayAmount" @close="closeClaimPopup" />
 </template>
 
 <script setup lang="ts">
@@ -124,12 +148,11 @@ import {
     createWithdraw,
     claimVideoRewardAsync,
     GetAlipayAuthString,
-    type WithdrawOptionDto,
     type WithdrawRequestDto
 } from '@/api/MyEarnings/api'
 import { beginPageView, addOnClick } from '@/utils/YMDataH5Bridge'
-import { onBeforeRouteLeave } from 'vue-router'
 
+const withdrawtips = ref('推荐使用支付宝提现，高效便捷到账快')
 /** 是否已上报开始埋点 */
 const hasReportedStart = ref(false)
 //领取成功弹框
@@ -143,56 +166,8 @@ const dataObj = { states: 0, page: 'MyEarnings', value: '', type: '', key: '' }
 // 加载状态
 const loading = ref(false)
 
-// 页面加载时获取数据
-onMounted(async () => {
-    try {
-        //  监听 Flutter 调用
-        window.H5Bridge.on('pageRefresh', (data) => {
-            // console.log('微信授权回值', data);
-            if (data?.businessType) {
-                if (data.businessType == 'wechatAuth') {
-                    //微信授权成功刷新状态
-                    fetchBindingStatus();
-                    return;
-                }
-                if (data.businessType == 'alipayAuth') {
-                    //支付宝授权成功刷新状态
-                    fetchBindingStatus();
-                    return;
-                }
-            }
-            else {
-                // 校验参数
-                if (!data?.userId || !data?.transId || !data?.taskId) {
-                    console.warn('pageRefresh 数据不完整', data);
-                    return;
-                }
-                if (data.taskId == 10022) {
-                    //插入看视频给的抽奖机会
-                    claimVideoRewardAsync({ clientRefId: data.transId }).then((res => {
-                        //刷新页面列表任务进度
-                        fetchWithdrawOptions();
-                    }));
-                } else {
-                    showToast('hdid不正确')
-                }
-            }
-        })
-    } catch (e: any) {
-        showToast(e?.message || ' 监听 Flutter 调用')
-    }
-    await Promise.all([
-        fetchRevenueRecords(),
-        fetchWithdrawOptions(),
-        fetchBindingStatus()
-    ])
-    //用户浏览我的收益页面开始-数据埋点
-    beginPageView('1', '展示我的收益时')
-})
-
-
 // 当前选择的 tab
-const activeTab = ref<string>('wechat')
+const activeTab = ref<string>('alipay')
 
 // 选中的提现卡片索引（用于高亮）
 const selectedIndex = ref<number | null>(null)
@@ -213,6 +188,9 @@ const userBindings = ref({
 // 绑定弹框状态
 const showBindingPopup = ref(false)
 const bindingMethod = ref<string>('wechat')
+
+// 实名认证弹框状态 (新增)
+const showAuthPopup = ref(false)
 
 // 任务完成情况
 const taskStatus = ref({
@@ -254,7 +232,7 @@ const fetchRevenueRecords = async () => {
         showToast('获取收益数据失败')
     }
 }
-// 看视频获得一次体现机会（ 
+// 看视频获得一次体现机会
 const handleWatchVideo = () => {
     dataObj.type = 'ShowVedioAD'
     dataObj.key = 'ShowVedioAD';
@@ -320,6 +298,87 @@ const fetchBindingStatus = async () => {
 /** ===== 页面交互方法 ===== */
 
 /**
+ * 判断卡片是否可选：现金不足则不可选
+ */
+const isDisabled = (opt: any) => earnings.value.cash < opt.amount
+
+/**
+ * 自动选择第一个可用的提现选项
+ */
+const autoSelectFirstAvailableOption = () => {
+    if (withdrawOptions.value.length === 0) {
+        selectedIndex.value = null
+        return
+    }
+
+    const firstAvailableIndex = withdrawOptions.value.findIndex((opt) => {
+        return !isDisabled(opt)
+    })
+
+    if (firstAvailableIndex !== -1) {
+        selectedIndex.value = firstAvailableIndex
+    } else {
+        selectedIndex.value = null
+    }
+}
+
+// 页面加载时获取数据
+onMounted(async () => {
+    try {
+        //  监听 Flutter 调用
+        window.H5Bridge.on('pageRefresh', (data: any) => {
+            if (data?.businessType) {
+                if (data.businessType == 'wechatAuth') {
+                    //微信授权成功刷新状态
+                    fetchBindingStatus();
+                    return;
+                }
+                if (data.businessType == 'alipayAuth') {
+                    //支付宝授权成功刷新状态
+                    fetchBindingStatus();
+                    return;
+                }
+            }
+            else {
+                // 校验参数
+                if (!data?.userId || !data?.transId || !data?.taskId) {
+                    console.warn('pageRefresh 数据不完整', data);
+                    return;
+                }
+                if (data.taskId == 10022) {
+                    //插入看视频给的抽奖机会
+                    claimVideoRewardAsync({ clientRefId: data.transId }).then((res => {
+                        //刷新页面列表任务进度
+                        fetchWithdrawOptions().then(() => {
+                            // 重新获取选项后，执行自动选择
+                            autoSelectFirstAvailableOption();
+                        });
+                    }));
+                } else {
+                    showToast('hdid不正确')
+                }
+            }
+        })
+    } catch (e: any) {
+        showToast(e?.message || ' 监听 Flutter 调用')
+    }
+
+    // 确保收益和选项数据加载完毕
+    await Promise.all([
+        fetchRevenueRecords(), // 确保 earnings.cash 有值
+        fetchWithdrawOptions(), // 确保 withdrawOptions 有值
+        fetchBindingStatus()
+    ])
+
+    // 在所有数据加载完成后，执行一次默认选择
+    autoSelectFirstAvailableOption()
+
+    //用户浏览我的收益页面开始-数据埋点
+    beginPageView('1', '展示我的收益时')
+})
+
+
+/**
  * 跳转到收益记录页面
  */
 const goToRevenueRecord = (tab: 'spark' | 'cash') => {
@@ -373,10 +432,6 @@ const handleCloseBindingPopup = () => {
     showBindingPopup.value = false
 }
 
-/**
- * 判断卡片是否可选：现金不足则不可选
- */
-const isDisabled = (opt: any) => earnings.value.cash < opt.amount
 
 /**
  * 获取最小提现金额
@@ -390,7 +445,8 @@ const minWithdrawAmount = computed(() => {
  * 当前是否有余额不足
  */
 const isInsufficientBalance = computed(() => {
-    return earnings.value.cash < minWithdrawAmount.value
+    if (withdrawOptions.value.length === 0) return false
+    return !withdrawOptions.value.some(opt => !isDisabled(opt))
 })
 
 /**
@@ -425,7 +481,6 @@ const actionBtnText = computed(() => {
     const option = currentSelectedOption.value
     if (!option) return '立即提现'
 
-    // 根据条件类型返回相应文案
     switch (option.condition) {
         case 'video':
             return taskStatus.value.video.completed ? '立即提现' : '去看视频'
@@ -443,9 +498,6 @@ const actionBtnText = computed(() => {
 /**
  * 计算按钮副文案
  */
-/**
- * 计算按钮副文案
- */
 const actionBtnSubtext = computed(() => {
     if (isInsufficientBalance.value || selectedIndex.value === null) {
         return ''
@@ -454,7 +506,6 @@ const actionBtnSubtext = computed(() => {
     const option = currentSelectedOption.value
     if (!option) return ''
 
-    // 根据条件类型返回相应副文案
     switch (option.condition) {
         case 'video':
             if (taskStatus.value.video.completed) return ''
@@ -479,7 +530,6 @@ const onClickLeft = () => {
     dataObj.value = '';
     dataObj.type = '';
     (window as any).H5Bridge?.closePage?.(dataObj)
-    //用户浏览我的收益页面结束-数据埋点
     beginPageView('2', '展示我的收益时')
 }
 
@@ -492,7 +542,7 @@ const ruleList = ref([
     '4.提现一般3~5天内到账(您理解并同意如遇提现高峰或节假日，提现到账时间会延长)。活动高峰期间，由于网络拥堵，用户可能存在短时间内无法提现的情况。平台将尽最大努力及时恢复提现功能，但无需因此承担任何责任。',
     '5.为保证用户顺利提现，提现需用户按照提现页面规范操作，如用户未按提现要求操作或不符合第三方支付平台的要求等原因导致不能收款(如未做实名认证或提现前与平台账号解绑等)，所获得的金币等将无法提现，本平台无需承担任何责任。',
     '6.若您连续15个白然日未进入任务页面、或连续15个自然日未领取任何活动连续您的所有福利将过期，逾期未提现则视奖励的(任一)，那么此前本平台发放给为用户自愿放弃提现的权利，现金账户金额将被清零，平台将不会也无义务给予任何形式的补偿。',
-    '7.未成年人用户应在其监护人的陪同下使用本APP并应在征得其监护人的同意后进行，用户均应确保提供的信息准确无误，如因填写信息错误等非本平台原连弃全部金额，平台不承担责任。因导致不能提现/兑换，视为用户自愿放弃全部金额，平台不承担责任。',
+    '7.未成年人用户应在其监护人的陪同下使用本 APP 并应在征得其监护人的同意后进行，用户均应确保提供的信息准确无误，如因填写信息错误等非本平台原连弃全部金额，平台不承担责任。因导致不能提现/兑换，视为用户自愿放弃全部金额，平台不承担责任。',
     '8.我们应用先进的人工智能分析您的行为，在提现/兑换过程中，为更好的保护用户账号及相关资产的安全，本平台有权审核您的订单，对您的提现的次数、金额和/或账号的数量进行限制，并随时提高安全校验措施(包括但不限于短信验证、身份验证等手段)，如您未能通过安全校验，则将无法提现/兑换，如发现造假或其他不正当手段及舞弊行为，我们有权阻止您使用(填写邀请码、领取金币、提现、获取红包)以及取消您获得的红包。用户应自行承担因此不能提现/兑换所导致的不利后果，本平台对此不承担责任。',
     '9.用户通过平台举办的活动获得收益或奖励的，平台可能需要为用户代扣代缴税款或办理纳税申报。为履行上述法定义务，平台需依照税务机关实际要求，收集并提供用户实名信息、收益金额等涉税信息和资料。如用户未向平台提供信息或提供错误信息，可能导致平台无法办理，用户应自行申报纳税，由此造成的其他不利后果由用户自行承担。',
     '10.平台现行有效的《用户协议》《隐私政策》以及日常活动规则(统称为「前述协议」)同样适用。本规则及相关条款与前述协议相冲突的，以本规则为准;本规则未约定的内容，仍以前述协议为准。',
@@ -516,24 +566,30 @@ const handleTabClick = (name: string) => {
  */
 const onTabChange = (name: string | number) => {
     const method = name === 'wechat' ? '微信' : '支付宝'
-    showToast(`已切换至${method}提现`)
+    if (method == '微信') {
+        withdrawtips.value = '微信提现系统审核通过后需点击确认提现按钮才能提现到账成功，注意⚠️请在24小时内完成提现'
+    }
+    else if (method == '支付宝') {
+        withdrawtips.value = '推荐使用支付宝提现，高效便捷到账快'
+    }
     //友盟数据埋点-用户点击时
     addOnClick({ taskId: 0, pageName: '点击' + method + '提现时' });
 }
 
 /**
- * 实名认证
+ * 实名认证 (已修改为显示自定义弹窗)
  */
 const goToAuth = () => {
-    showDialog({
-        title: '实名认证',
-        message: '完成实名认证后，提现更快更安全！',
-        confirmButtonText: '去认证',
-        cancelButtonText: '稍后再说',
-        showCancelButton: true
-    }).then(() => {
-        router.push('/RealNameAuth')
-    }).catch(() => { /* 用户取消 */ })
+    // 替换原有的 showDialog，改为显示自定义弹窗
+    showAuthPopup.value = true
+}
+
+/**
+ * 处理实名认证跳转
+ */
+const handleGoRealNameAuth = () => {
+    showAuthPopup.value = false
+    router.push('/RealNameAuth')
 }
 
 /**
@@ -575,8 +631,6 @@ const handleActionBtn = () => {
             if (taskStatus.value.video.completed) {
                 proceedWithdraw(option.amount, option.condition)
             } else {
-                //showToast('请先完成看视频任务')
-                // router.push('/video')
                 handleWatchVideo();
             }
             break
@@ -585,7 +639,6 @@ const handleActionBtn = () => {
                 proceedWithdraw(option.amount, option.condition)
             } else {
                 showToast('请先完成阅读任务')
-                // router.push('/read')
             }
             break
         case 'signin':
@@ -593,7 +646,6 @@ const handleActionBtn = () => {
                 proceedWithdraw(option.amount, option.condition)
             } else {
                 showToast('请先完成签到任务')
-                // router.push('/signin')
             }
             break
         case 'normal':
@@ -639,11 +691,10 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
         cancelButtonText: '取消',
         showCancelButton: true
     }).then(async () => {
-        // 执行提现逻辑
         showToast({
             message: '提现中...',
             forbidClick: true,
-            duration: 0 // 不自动关闭
+            duration: 0
         })
 
         try {
@@ -652,17 +703,21 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
                 paymentMethod: activeTab.value,
                 condition
             }
-            await validateWithdraw(params).then((async res => {
-                var data = await createWithdraw(params)
-                showToast('提现申请成功！')
-                // 刷新页面数据
-                selectedIndex.value = null
-                // 跳转到进度页面，传递 id
-                router.push({
-                    path: '/WithdrawProgress',
-                    query: { Id: data.refId }
-                })
-            }))
+            await validateWithdraw(params)
+            var data = await createWithdraw(params)
+
+            showToast('提现申请成功！')
+
+            await Promise.all([
+                fetchRevenueRecords(),
+                fetchWithdrawOptions()
+            ])
+            autoSelectFirstAvailableOption()
+
+            router.push({
+                path: '/WithdrawProgress',
+                query: { Id: data.refId }
+            })
         } catch (error) {
             showToast(error instanceof Error ? error.message : String(error))
         }
@@ -674,6 +729,11 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 
 <style scoped lang="scss">
 /* ================== 全局与页面基调 ================== */
+
+.app {
+    background: #F2F2F2;
+}
+
 .myearnings-page {
     min-block-size: 100vh;
     background-image: url('/img/MyEarnings/back.png');
@@ -686,7 +746,6 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
     background: transparent;
     padding-block-start: 45px;
     padding-block-end: 5px;
-    // block-size: 88px;
 
     :deep(.van-nav-bar__arrow) {
         color: #1E1E1E;
@@ -694,7 +753,19 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
         font-weight: bold;
     }
 
-    // 彻底移除所有边框和hairline
+    :deep(.van-nav-bar__arrow) {
+        background-image: url(/img/public/back.png);
+        background-size: 23px;
+        background-position: center;
+        background-repeat: no-repeat;
+        width: 26px;
+        height: 26px;
+    }
+
+    :deep(.van-nav-bar__arrow::before) {
+        content: none;
+    }
+
     &::after,
     &::before {
         display: none !important;
@@ -702,7 +773,6 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
         border: 0 !important;
     }
 
-    // 移除 van-hairline--bottom 的效果
     &.van-hairline--bottom::after,
     &.van-hairline--top::after {
         display: none !important;
@@ -710,7 +780,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 
     .nav-title {
         font-family: PingFang SC;
-        font-weight: 600;
+        font-weight: 500;
         font-size: 18px;
         line-height: 26px;
         color: #252525;
@@ -730,63 +800,6 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 
 .page-content {
     padding: 0 15px;
-}
-
-/* ============================================================================
-   规则弹窗
-   ========================================================================== */
-.rule-popup {
-    inline-size: 320px;
-    /* 300~340 自行调整 */
-    padding: 16px 16px 14px;
-    background: #fff;
-    border-radius: 14px;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
-}
-
-.rule-title {
-    margin-block-end: 10px;
-    text-align: center;
-    font-size: 16px;
-    font-weight: 600;
-    color: rgba(133, 61, 33, 1);
-}
-
-.rule-content {
-    max-block-size: 50vh;
-    overflow: auto;
-    padding: 6px 2px 10px;
-
-    ol {
-        margin: 0;
-        padding-inline-start: 20px;
-    }
-
-    li {
-        margin: 6px 0;
-        font-size: 13px;
-        line-height: 20px;
-        color: #8b6a4b;
-    }
-}
-
-.rule-actions {
-    display: flex;
-    justify-content: center;
-    margin-block-start: 6px;
-
-    .btn.primary {
-        min-inline-size: 120px;
-        block-size: 36px;
-        padding: 0 16px;
-        border: 0;
-        border-radius: 999px;
-        line-height: 36px;
-        font-size: 14px;
-        background: #fa6725;
-        color: #fff;
-        // background: linear-gradient(180deg, var(--brand-start) 0%, var(--brand-end) 100%);
-    }
 }
 
 /* 实名认证提示 */
@@ -843,13 +856,14 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
         align-items: center;
         gap: 1.06667vw;
         line-height: 16px;
+        font-weight: 500;
     }
 
     .amount {
         text-align: start;
         font-size: 32px;
         font-weight: bold;
-        color: #1E1E1E;
+        color: #252525;
     }
 }
 
@@ -861,7 +875,6 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
     border-radius: 12px;
     padding: 0;
     overflow: hidden;
-    box-shadow: 0 3px 10px rgba(255, 107, 53, 0.25);
 }
 
 /* ================== 自定义 Tab 样式（替代 van-tabs）================== */
@@ -893,7 +906,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
     margin: 0;
     block-size: 46px;
     background: transparent;
-    color: #999;
+    color: rgba(37, 37, 37, 0.5);
     border: 0;
     display: flex;
     align-items: center;
@@ -918,10 +931,21 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
     z-index: 1;
 }
 
-/* 激活状态时隐藏分隔线 */
 .custom-tab--active::after,
 .custom-tab--active+.custom-tab::before {
     display: none;
+}
+
+.tjpay {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    background: linear-gradient(90.22deg, #F56D13 0.19%, #FDA045 99.82%);
+    color: #FFFFFF;
+    font-size: 2.5641vw;
+    padding: 0.51282vw 1.53846vw;
+    border-radius: 2.05128vw 0 2.05128vw 0;
+    font-weight: 500;
 }
 
 .tab-title {
@@ -933,14 +957,12 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
     position: relative;
     z-index: 3;
     transition: all .25s;
+    font-weight: 500;
 }
 
-/* 图标基础样式 */
 .wechat-pay,
 .alipay {
     display: inline-block;
-    inline-size: 16px;
-    block-size: 16px;
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
@@ -949,19 +971,23 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 
 .wechat-pay {
     background-image: url(/img/MyEarnings/wechat-pay.png);
+    width: 18px;
+    height: 16px;
+    z-index: 9px;
 }
 
 .alipay {
     background-image: url(/img/MyEarnings/alipay.png);
+    width: 16px;
+    height: 16px;
+    z-index: 9px;
 }
 
-/* 第一个tab激活状态 */
 .custom-tab:nth-child(1).custom-tab--active {
     background-position: 0 0;
     background-repeat: no-repeat;
     background-size: 100% 100%;
     background-image: url(/img/MyEarnings/tab_left.png);
-    //background: #FFFFFF;
 }
 
 .custom-tab:nth-child(1).custom-tab--active .tab-title {
@@ -969,12 +995,13 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
     font-size: 18px;
 }
 
-.custom-tab:nth-child(1).custom-tab--active .wechat-pay {
-    inline-size: 18px;
-    block-size: 18px;
+.custom-tab:nth-child(2).custom-tab--active .wechat-pay {
+    background-image: url(/img/MyEarnings/wechat-pay.png);
+    width: 22px !important;
+    height: 20px !important;
+    z-index: 10;
 }
 
-/* 第二个tab激活状态 */
 .custom-tab:nth-child(2).custom-tab--active {
     background-position: 0 0;
     background-repeat: no-repeat;
@@ -987,9 +1014,11 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
     font-size: 18px;
 }
 
-.custom-tab:nth-child(2).custom-tab--active .alipay {
-    inline-size: 18px;
-    block-size: 18px;
+.custom-tab:nth-child(1).custom-tab--active .alipay {
+    background-image: url(/img/MyEarnings/alipay.png);
+    width: 20px !important;
+    height: 20px !important;
+    z-index: 10;
 }
 
 /* 提现说明 */
@@ -1002,7 +1031,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
     font-weight: 400;
 }
 
-/* 提现金额网格（每行3列） */
+/* 提现金额网格 */
 .amount-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -1010,7 +1039,6 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
     padding: 0 15px 15px;
 }
 
-/* 卡片样式 */
 .amount-option {
     background: #F7F8FA;
     border-radius: 8px;
@@ -1066,10 +1094,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
         color: #7C7C7C;
     }
 
-    /* 选中状态 */
     &.is-selected {
-        // border-color: #FA6725;
-        //  box-shadow: 0 0 0 1px rgba(250, 103, 37, 0.08), 0 6px 12px rgba(250, 103, 37, 0.12);
         background: #FFF6F2;
 
         .value {
@@ -1081,7 +1106,6 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
         }
     }
 
-    /* 不可选状态 */
     &.is-disabled {
         filter: grayscale(20%);
         opacity: 0.55;
@@ -1095,7 +1119,6 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
     inline-size: 245px;
     background: #FA6725;
     border-radius: 6.66667vw;
-    box-shadow: 0 0.8vw 2.66667vw rgba(255, 107, 53, 0.25);
     transition: all 0.2s ease;
     align-self: center;
     margin: 16px auto 24px;
@@ -1109,13 +1132,11 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 
     &:active:not(.is-disabled) {
         transform: scale(0.98);
-        box-shadow: 0 2px 6px rgba(255, 107, 53, 0.3);
     }
 
     &.is-disabled {
         background: #CCCCCC;
         cursor: not-allowed;
-        box-shadow: 0 0.8vw 2.66667vw rgba(0, 0, 0, 0.08);
     }
 
     .btn-text {
@@ -1123,8 +1144,6 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
         font-weight: 500;
         font-size: 16px;
         line-height: 100%;
-        letter-spacing: 0px;
-        text-align: center;
         color: #FFFFFF;
         margin-block-end: 2px;
     }
@@ -1133,88 +1152,155 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
         font-family: PingFang SC;
         font-weight: 400;
         font-size: 10px;
-        letter-spacing: 0px;
-        text-align: center;
         color: #FFFFFF;
     }
 }
 
-/* Vant 绑定弹框 */
-.success-popup {
-    inline-size: 270px !important;
-    block-size: 185px !important;
-    background: #FFFFFF;
-    border-radius: 16px !important;
+/* ================== 新增：自定义弹框样式 (复刻图片效果) ================== */
+:deep(.custom-pink-popup) {
+    width: 270px !important;
+    height: 187px;
+    background: transparent !important;
     overflow: visible !important;
-}
 
-/* 弹框内容与图片尺寸 */
-.popup-content {
-    font-size: 14px;
-    font-family: PingFang SC;
-    font-weight: 400;
-    padding: 14px;
-    line-height: 26px;
-    letter-spacing: 0px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
-}
+    .popup-wrapper {
+        background: #ffffff;
+        border-radius: 20px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
 
-.binding-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: #2C2C2C;
-    margin: 0;
-    line-height: 1.3;
-}
+    /* 上半部分：白色内容区 */
+    .content-top {
+        background: #ffffff;
+        padding: 24px 20px 20px 20px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
 
-//文案
-.binding-message {
-    line-height: 26px;
-}
+        .pop-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: #252525;
+            margin-top: -5px;
+            margin-bottom: 12px;
+            line-height: 1.2;
+            font-family: PingFang SC;
+        }
 
-/* 弹框主按钮 */
-.binding-btn {
-    inline-size: 230px;
-    block-size: 42px;
-    font-size: 16px;
-    font-weight: 600;
-    margin-block-start: 8px;
-    background: #FA6725 !important;
-    border: none !important;
-}
+        .pop-message {
+            font-size: 14px;
+            font-weight: 400;
+            color: #8A8A8A;
+            line-height: 20px;
+            text-align: center;
+            margin-top: 10px;
+        }
+    }
 
-/* 自定义外部关闭按钮 */
-.outside-close {
-    background-image: url(/img/public/取消按钮.svg);
-    background-color: #00000040;
-    background-size: 100% 100%;
-    background-position: top center;
-    background-repeat: no-repeat;
-    position: absolute;
-    inset-inline-start: 50%;
-    inset-block-start: calc(100% + clamp(8px, 2.5vh, 16px));
-    transform: translateX(-50%);
-    z-index: 1001;
-    inline-size: 26px;
-    block-size: 26px;
-    border-radius: 50%;
-    color: #fff;
-    font-size: 18px;
-    font-weight: 900;
-    line-height: 32px;
-    text-align: center;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
-    transition: background .2s, transform .2s;
-    margin: 0;
-}
+    /* 下半部分：粉色按钮区 */
+    .content-bottom {
+        // background: #FFC1C1;
+        padding: 0px 24px 24px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
 
-.outside-close:active {
-    transform: translateX(-50%) scale(0.92);
+        .action-btn-main {
+            font-family: PingFang SC;
+            width: 230px !important;
+            height: 42px;
+            background: #FA6725 !important;
+            border: none !important;
+            font-size: 14px;
+            font-weight: 500;
+            color: #ffffff !important;
+            //box-shadow: 0 4px 10px rgba(255, 102, 34, 0.2);
+            border-radius: 999px;
+
+        }
+
+        .confirm-btns {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            gap: 15px;
+
+            .btn {
+                flex: 1;
+                height: 40px;
+                border-radius: 20px;
+                font-size: 16px;
+                font-weight: 500;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                outline: none;
+            }
+
+            .btn-cancel {
+                background: #FFFFFF;
+                border: 1px solid #FA6725;
+                color: #FA6725;
+            }
+
+            .btn-confirm {
+                background: #FA6725;
+                border: none;
+                color: #FFFFFF;
+                /* box-shadow: 0 0.51282vw 1.53846vw rgba(255, 107, 53, 0.2); */
+                width: 109px;
+                height: 42px;
+            }
+
+            .btn:active {
+                opacity: 0.8;
+            }
+        }
+    }
+
+    /* 底部外部关闭按钮 */
+    .outside-close-btn {
+        position: absolute;
+        bottom: -90px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 32px;
+        height: 32px;
+        background: url('/img/public/取消按钮.svg') no-repeat center;
+        background-size: contain;
+        border: none;
+        cursor: pointer;
+        opacity: 0.9;
+
+        /* 兜底样式，如果没有 SVG 图片 */
+        &::before,
+        &::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 2px;
+            background: #fff;
+            display: none;
+            /* 有图时隐藏，无图可去掉这行 */
+        }
+
+        &::before {
+            transform: translate(-50%, -50%) rotate(45deg);
+        }
+
+        &::after {
+            transform: translate(-50%, -50%) rotate(-45deg);
+        }
+
+        &:active {
+            transform: translateX(-50%) scale(0.9);
+        }
+    }
 }
 </style>

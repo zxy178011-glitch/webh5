@@ -79,7 +79,7 @@ const routes = [
     name: 'MyEarnings',
     component: () => import('@/pages/MyEarnings/App.vue'),
     meta: {
-      keepAlive: true, // 页面添加缓存
+      keepAlive: false, // 页面添加缓存
       title: '我的收益'
     }
   },
@@ -90,7 +90,7 @@ const routes = [
     name: 'RevenueRecord',
     component: () => import('@/pages/RevenueRecord/App.vue'),
     meta: {
-      keepAlive: true, // 页面添加缓存
+      keepAlive: false, // 页面添加缓存
       title: '收益记录'
     }
   },
@@ -107,7 +107,7 @@ const routes = [
     name: 'WithdrawProgress',
     component: () => import('@/pages/RevenueRecord/WithdrawProgress.vue'),
     meta: {
-      keepAlive: true, // 页面添加缓存
+      keepAlive: false, // 页面添加缓存
       title: '处理进度'
     }
   },

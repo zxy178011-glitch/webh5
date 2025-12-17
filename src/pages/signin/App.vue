@@ -208,6 +208,10 @@ const amountBig = computed(() => {
 // 小卡片视图数据（与原逻辑一致）
 const viewDays = computed(() => {
     const signedToday = state.signedToday
+
+    // 检查列表中是否存在可续签候选（retroEligible=true）
+    const anyRetroEligible = state.days.some(d => d.retroEligible === true)
+
     const retroCands = state.days.filter(d => d.retroEligible && !d.completed)
     const activeRetroIndex = (!signedToday && retroCands.length)
         ? Math.min(...retroCands.map(x => Number(x.dayIndex))) : -1
@@ -219,14 +223,17 @@ const viewDays = computed(() => {
         const isActiveRetro = Number(d.dayIndex) === activeRetroIndex
         const isTomorrow = signedToday && Number(d.dayIndex) === tmrIdx
 
-        const cardClass = {
-            'done': isCompleted,
-            'today': (!signedToday && d.isToday) || false,
-            'active': (!signedToday && hasRetro.value && isActiveRetro) || false,
-            'tomorrow': isTomorrow,
-            'pulse': isTomorrow // 明日高亮（pulse 动画由 CSS 控制）
-        }
+        // 如果列表中存在任何 retroEligible=true 的项，则禁止显示 today
+        const showToday = !anyRetroEligible && !signedToday && !!d.isToday
 
+        const cardClass = {
+            'done': !!isCompleted,
+            'today': !!showToday, // 若 anyRetroEligible 为 true，则一定是 false
+            'active': !!(!signedToday && hasRetro.value && isActiveRetro),
+            'tomorrow': !!isTomorrow,
+            'pulse': !!isTomorrow // 明日高亮（pulse 动画由 CSS 控制）
+        }
+        console.log('cardClass', cardClass)
         // label 文案
         let labelText = `第${d.dayIndex}天`
         if (signedToday) {

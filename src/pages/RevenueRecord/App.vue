@@ -1,85 +1,87 @@
 <template>
-  <div class="revenue-page">
-    <RulePopup v-model="showRule" title="规则" :rules="ruleList" confirmText="我知道了" />
-    <div class="page-top">
-      <!-- 顶部导航栏 -->
-      <van-nav-bar left-arrow @click-left="onClickLeft" safe-area-inset-top class="nav-bar">
-        <template #title>
-          <span class="nav-title">收益记录</span>
-        </template>
-        <template #right>
-          <span class="rule-btn" @click="showRulePopup">规则</span>
-        </template>
-      </van-nav-bar>
-    </div>
-    <div class="page-content">
-      <!-- 统计卡片 -->
-      <div class="stats-card">
-        <div class="stats-row">
-          <div class="stat-item">
-            <div class="stat-label">火花收益（火花）</div>
-            <div class="stat-value">{{ revenueData.sparkCount || 0 }}</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-label">现金收益（元）</div>
-            <div class="stat-value">{{ revenueData.alreadySwitchCash?.toFixed(2) || '0.00' }}</div>
-          </div>
-        </div>
-        <div class="ad-tip">
-          <div> <van-divider :style="{ borderColor: '#252525', heigth: '1px', opacity: '0.5' }" />
-          </div>
-          汇率受每日广告收益影响会有浮动
-        </div>
+  <div class="app">
+    <div class="revenue-page">
+      <RulePopup v-model="showRule" title="规则" :rules="ruleList" confirmText="我知道了" />
+      <div class="page-top">
+        <!-- 顶部导航栏 -->
+        <van-nav-bar left-arrow @click-left="onClickLeft" safe-area-inset-top class="nav-bar">
+          <template #title>
+            <span class="nav-title">收益记录</span>
+          </template>
+          <template #right>
+            <span class="rule-btn" @click="showRulePopup">规则</span>
+          </template>
+        </van-nav-bar>
       </div>
-
-      <!-- Tab切换 -->
-      <van-tabs v-model:active="activeTab" sticky offset-top="0" class="van-tabss">
-        <van-tab title="火花记录" name="spark">
-          <div class="record-list">
-            <div v-for="(item, index) in sparkList" :key="index" class="record-item">
-              <div class="record-left">
-                <div class="record-title">{{ getSparkTitle(item.obtainContent) }}</div>
-                <div class="record-time">{{ formatDateStrict(item.createDate) }}</div>
-              </div>
-              <div class="record-right">
-                <span :class="['amount', item.obtainCount > 0 ? 'positive' : 'negative']">
-                  {{ item.obtainCount > 0 ? '+' : '' }}{{ item.obtainCount }}
-                </span>
-              </div>
+      <div class="page-content">
+        <!-- 统计卡片 -->
+        <div class="stats-card">
+          <div class="stats-row">
+            <div class="stat-item">
+              <div class="stat-label">火花收益（火花）</div>
+              <div class="stat-value">{{ revenueData.sparkCount || 0 }}</div>
             </div>
-
-            <div v-if="sparkList.length === 0" class="empty-state">
-
-              <van-empty description="暂无火花记录" />
+            <div class="stat-item">
+              <div class="stat-label">现金收益（元）</div>
+              <div class="stat-value">{{ revenueData.alreadySwitchCash?.toFixed(2) || '0.00' }}</div>
             </div>
           </div>
-        </van-tab>
-
-        <van-tab title="现金记录" name="cash">
-          <div class="record-list">
-            <div v-for="(item, index) in cashList" :key="index" class="record-item">
-              <div class="record-left">
-                <div class="record-title">{{ item.title }}</div>
-                <div class="record-time">{{ formatDateStrict(item.createDate) }} </div>
-              </div>
-              <div v-if="item.cashType == 1" class="record-right">
-                <span class="amount positive">+ {{ item.cashCount.toFixed(2) }}</span>
-
-              </div>
-              <div v-if="item.cashType == 2" class="record-right clickable-area" @click="toWithdrawProgress(item)">
-                <span v-if="item.drawCashStatus == 2" class="amount black">
-                  - {{ item.cashCount.toFixed(2) }}
-                </span>
-                <span v-if="item.drawCashStatus != 2" class="Vector-right-icon"></span>
-              </div>
+          <div class="ad-tip">
+            <div> <van-divider :style="{ borderColor: '#252525', heigth: '3px', opacity: '0.2' }" />
             </div>
-            <!-- 提现相关记录项 -->
-            <div v-if="cashList.length === 0 && !showStaticRecords" class="empty-state">
-              <van-empty description="暂无现金记录" />
-            </div>
+            汇率受每日广告收益影响会有浮动
           </div>
-        </van-tab>
-      </van-tabs>
+        </div>
+
+        <!-- Tab切换 -->
+        <van-tabs v-model:active="activeTab" sticky offset-top="0" class="van-tabss">
+          <van-tab title="火花记录" name="spark">
+            <div class="record-list">
+              <div v-for="(item, index) in sparkList" :key="index" class="record-item">
+                <div class="record-left">
+                  <div class="record-title">{{ getSparkTitle(item.obtainContent) }}</div>
+                  <div class="record-time">{{ formatDateStrict(item.createDate) }}</div>
+                </div>
+                <div class="record-right">
+                  <span :class="['amount', item.obtainCount > 0 ? 'positive' : 'negative']">
+                    {{ item.obtainCount > 0 ? '+' : '' }}{{ item.obtainCount }}
+                  </span>
+                </div>
+              </div>
+
+              <div v-if="sparkList.length === 0" class="empty-state">
+
+                <van-empty description="暂无火花记录" />
+              </div>
+            </div>
+          </van-tab>
+
+          <van-tab title="现金记录" name="cash">
+            <div class="record-list">
+              <div v-for="(item, index) in cashList" :key="index" class="record-item">
+                <div class="record-left">
+                  <div class="record-title">{{ item.title }}</div>
+                  <div class="record-time">{{ formatDateStrict(item.createDate) }} </div>
+                </div>
+                <div v-if="item.cashType == 1" class="record-right">
+                  <span class="amount positive">+{{ item.cashCount.toFixed(2) }}</span>
+
+                </div>
+                <div v-if="item.cashType == 2" class="record-right clickable-area" @click="toWithdrawProgress(item)">
+                  <span v-if="item.drawCashStatus == 2" class="amount black">
+                    - {{ item.cashCount.toFixed(2) }}
+                  </span>
+                  <span v-if="item.drawCashStatus != 2" class="Vector-right-icon"></span>
+                </div>
+              </div>
+              <!-- 提现相关记录项 -->
+              <div v-if="cashList.length === 0 && !showStaticRecords" class="empty-state">
+                <van-empty description="暂无现金记录" />
+              </div>
+            </div>
+          </van-tab>
+        </van-tabs>
+      </div>
     </div>
   </div>
 </template>
@@ -223,6 +225,10 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 /* ================== 全局与页面基调 ================== */
+.app {
+  background: #F2F2F2;
+}
+
 .revenue-page {
   min-height: 100vh;
   background-image: url('/img/MyEarnings/back.png');
@@ -265,6 +271,20 @@ onMounted(() => {
     color: #1E1E1E;
     font-size: 18px;
     font-weight: bold;
+  }
+
+  :deep(.van-nav-bar__arrow) {
+    background-image: url(/img/public/back.png);
+    background-size: 23px;
+    background-position: center;
+    background-repeat: no-repeat;
+    width: 26px;
+    height: 26px;
+  }
+
+  /*  隐藏原有的 icon 内容 */
+  :deep(.van-nav-bar__arrow::before) {
+    content: none;
   }
 
   .nav-title {
@@ -374,19 +394,29 @@ onMounted(() => {
 
   .van-tab {
     border-bottom: 1px solid #EBEBEB;
+    font-size: 16px;
+    font-family: PingFang SC;
+    font-style: Medium;
+    line-height: 100%;
+    letter-spacing: 0px;
   }
 
   .van-tabs__nav {
     // background: rgba(255, 255, 255, 0.95);
     border-radius: 12px 12px 0 0; // 顶部圆角
     overflow: hidden; // 确保圆角生效
+    height: 52px;
+  }
+
+  .van-tabs__nav--line {
+    padding-bottom: 0;
   }
 
   .van-tabs__content {
     background: #fff;
     min-height: calc(100vh - 300px);
     border-radius: 0 0 12px 12px; // 底部圆角
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+   // box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
     transition: transform 180ms ease, box-shadow 180ms ease;
     overflow: hidden; // 确保圆角生效
   }
@@ -396,6 +426,7 @@ onMounted(() => {
     border-radius: 12px 12px 0 0;
     overflow: hidden;
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04); // 顶部轻微阴影
+    height: 52px;
   }
 
   .van-tab--active {
@@ -496,13 +527,13 @@ onMounted(() => {
 }
 
 .Vector-right-icon {
-  width: 14px;
-  height: 14px;
-  background-image: url('/img/MyEarnings/RevenueRecord/Vector-right.png');
-
+  width: 3.58974vw;
+  height: 3.58974vw;
+  background-image: url(/img/public/rightBack.png);
   background-position: top center;
   background-repeat: no-repeat;
-  color: #252525;
+  /* color: #252525; */
+  background-size: 14px;
 }
 
 .empty-state {

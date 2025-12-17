@@ -5,9 +5,9 @@
             <div class="modal" :class="{ closing: closing }">
                 <!-- Header -->
                 <div class="header">
-                    <!-- 标题：优先显示"恭喜"，否则根据 canOpen 显示两种倒计时文案 -->
+                    <!-- 标题:优先显示"恭喜",否则根据 canOpen 显示两种倒计时文案 -->
                     <div class="title">{{ headerTitle }}</div>
-                    <!-- 副标题（奖励数字）：只在 celebrating 时展示 -->
+                    <!-- 副标题(奖励数字):只在 celebrating 时展示 -->
                     <div class="subtitle" v-if="celebrating">
                         <b class="num">{{ lastReward.toLocaleString('zh-CN') }}</b>
                         <span class="unit">火花</span>
@@ -25,15 +25,15 @@
                             <div v-for="item in visibleChests" :key="item.index" class="chest-card"
                                 :class="[{ done: item.state === 'done', current: item.state === 'current' }]"
                                 @click="item.state === 'current' && canOpen && !celebrating ? openChest() : null">
-                                <!-- 顶部角标：倒计时 / 点击开启 -->
+                                <!-- 顶部角标:倒计时 / 点击开启 -->
                                 <div class="chip" v-if="item.state === 'current'">
                                     <span v-if="canOpen">点击开启</span>
                                     <span v-else>{{ remainText }}后开</span>
                                 </div>
 
-                                <!-- 宝箱图：已开=打开.png；未开=关闭.png -->
+                                <!-- 宝箱图:已开=打开.png;未开=关闭.png -->
                                 <div class="chest-img" :class="item.state === 'done' ? 'open' : 'closed'"></div>
-                                <!-- 金额：已开显示数字，未开显示 ??? 或预览 -->
+                                <!-- 金额:已开显示数字,未开显示 ??? 或预览 -->
                                 <div class="amount" v-if="item.state === 'done'">
                                     {{ formatAmount(item.amount) }}
                                 </div>
@@ -63,7 +63,7 @@
 
                 <!-- Bottom -->
                 <div class="bottom">
-                    <!--  根据状态切换文案；全开完禁用；冷却中允许点击（走 watchVideo） -->
+                    <!--  根据状态切换文案;全开完禁用;冷却中允许点击(走 watchVideo) -->
                     <button class="but" :disabled="openedCount >= TOTAL_PER_DAY || celebrating" @click="onCtaClick">
                         {{ ctaText }}
                     </button>
@@ -85,14 +85,17 @@ import { ClaimWatchReward } from '@/api/public/api'
 import { showDialog, showToast } from 'vant'
 import ClaimSuccessPopup from '@/components/Popup/SuccessPopup.vue'
 import { beginPageView, claim, addOnClick } from '@/utils/YMDataH5Bridge'
+
 const showOverlay = ref(true)
 const closing = ref(false)
+
 //领取成功弹框
 const showClaimSuccess = ref(false)
 const displayAmount = ref(0)
 function closeClaimPopup() {
     showClaimSuccess.value = false
 }
+
 /** ===== 业务常量 ===== */
 const TOTAL_PER_DAY = 288
 const COOLDOWN_SEC = 300 // 每 5 分钟开一个
@@ -100,14 +103,13 @@ const now = ref(Date.now())
 let timer: number | undefined
 
 /** ===== 服务端"天信息" ===== */
-const dayKey = ref<string>('')        // 服务端返回的自然日（例如 2025-09-28）
-const nextResetAt = ref<number>(0)     // 下一次"零点重置"的时间戳（ms）
+const dayKey = ref<string>('')        // 服务端返回的自然日(例如 2025-09-28)
+const nextResetAt = ref<number>(0)     // 下一次"零点重置"的时间戳(ms)
 const videoTeaserMax = ref<number | null>(null)
-
 const videoTeaserForIndex = ref<number | null>(null)
-const videoTeaserClaimed = ref(false) // ：本批次视频奖励是否已领取
+const videoTeaserClaimed = ref(false) // 本批次视频奖励是否已领取
 
-/** ===== 当天状态（与后端同步） ===== */
+/** ===== 当天状态(与后端同步) ===== */
 type DayState = {
     openedCount: number
     nextUnlockAt: number | null
@@ -123,14 +125,17 @@ const lastReward = ref(0) // 仅用于头部文案显示
 //页面通知移动端的数据
 const dataObj = { states: 0, page: 'openTreasureChest', value: '', type: '', key: '' }
 
-/** ===== 看视频按钮（冷却中）展示的随机上限 ===== */
+/** ===== 倒计时状态跟踪 ===== */
+const lastCanOpenState = ref(false) // 上一次的 canOpen 状态
+
+/** ===== 看视频按钮(冷却中)展示的随机上限 ===== */
 const videoMaxSpark = ref(0)
 function genVideoReward(min = 66, max = 266) {
     return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
-/** ===== 与后端同步：载入 / 保存 ===== */
-// 载入：从后端 Redis 获取（若无则由后端初始化）
+/** ===== 与后端同步:载入 / 保存 ===== */
+// 载入:从后端 Redis 获取(若无则由后端初始化)
 async function load() {
     try {
         const data = await getChestState()
@@ -140,9 +145,9 @@ async function load() {
         const s = data.state
         videoTeaserMax.value = s.videoTeaserMax ?? null
         videoTeaserForIndex.value = s.videoTeaserForIndex ?? null
-        videoTeaserClaimed.value = s.videoTeaserClaimed ?? false // 新增
+        videoTeaserClaimed.value = s.videoTeaserClaimed ?? false
 
-        // 规范化 amounts 的 key 为 number（后端可能下发 "1":1500）
+        // 规范化 amounts 的 key 为 number(后端可能下发 "1":1500)
         const normalized: Record<number, number> = {}
         Object.entries(s.amounts || {}).forEach(([k, v]) => {
             const keyNum = Number(k)
@@ -158,18 +163,16 @@ async function load() {
     } catch (e) { console.error(e) }
 }
 
-
-// 保存：把"当前缓存"同步给后端（不阻塞UI）
+// 保存:把"当前缓存"同步给后端(不阻塞UI)
 function save() {
-    // 异步 fire-and-forget；失败也不影响前端继续跑
+    // 异步 fire-and-forget;失败也不影响前端继续跑
     const body = {
-        dayKey: dayKey.value || '', // 后端天然以 tz 计算；这里传回去可做校验/日志
+        dayKey: dayKey.value || '', // 后端天然以 tz 计算;这里传回去可做校验/日志
         merge: true,
         state: {
             openedCount: openedCount.value,
             nextUnlockAt: nextUnlockAt.value,
-            amounts: amounts.value,
-            lastReward: lastReward.value,
+            // 不再传 amounts 和 lastReward,由后端生成
             totalPerDay: TOTAL_PER_DAY
         }
     }
@@ -202,22 +205,35 @@ const remainText = computed(() => {
 const headerTitle = computed(() =>
     celebrating.value
         ? '恭喜获得开宝箱奖励'
-        : (canOpen.value ? '倒计时结束，可开启宝箱' : '倒计时结束才能开启宝箱')
+        : (canOpen.value ? '倒计时结束,可开启宝箱' : '倒计时结束才能开启宝箱')
 )
 
-/** ===== 金额统一（预览=实际发奖） ===== */
+/** ===== 金额统一(预览=实际发奖) ===== */
+// 前端预览金额逻辑,与后端规则保持一致(显示中间值)
 function genAmount(i: number): number {
-    const seq = [1500, 1200, 800, 1000, 2000, 500, 300, 1800, 900, 600]
-    return seq[(i - 1) % seq.length]
+    if (i <= 3) {
+        return 1200;
+    } else if (i <= 20) {
+        return 350; // 显示 300-400 的中间值
+    } else if (i <= 50) {
+        return 150; // 显示 100-200 的中间值
+    } else {
+        return 50;  // 显示 1-100 的中间值
+    }
 }
+
 function chestAmountFor(index: number): number {
-    return amounts.value[index] ?? genAmount(index)
+    // 优先使用后端返回的实际金额
+    var data = amounts.value[index] ?? genAmount(index)
+    lastReward.value = data
+    return data;
 }
+
 function getPreviewAmount(index: number): number {
     return chestAmountFor(index)
 }
 
-/** ===== 可视宝箱（4 张卡固定） ===== */
+/** ===== 可视宝箱(4 张卡固定) ===== */
 const visibleChests = computed(() => {
     type ChestView = {
         index: number
@@ -266,18 +282,18 @@ const visibleChests = computed(() => {
     return arr.slice(0, 4)
 })
 
-/** ===== CTA（按钮）逻辑 ===== */
+/** ===== CTA(按钮)逻辑 ===== */
 const ctaText = computed(() => {
     if (openedCount.value >= TOTAL_PER_DAY) return '今日已全部开启'
     if (canOpen.value) return '点击开启'
 
     // 冷却中
     if (videoTeaserClaimed.value) {
-        // 已领取视频奖励：显示倒计时
+        // 已领取视频奖励:显示倒计时
         const nextIndex = openedCount.value + 1
         return `${remainText.value}后可开启第${nextIndex}个宝箱`
     } else {
-        // 未领取：显示看视频提示
+        // 未领取:显示看视频提示
         const val = (videoTeaserMax.value ?? 266)
         return `看视频最高再领取${val.toLocaleString('zh-CN')}火花`
     }
@@ -290,11 +306,9 @@ function onCtaClick() {
     if (openedCount.value >= TOTAL_PER_DAY) return
 
     if (canOpen.value) {
-        // console.log('开宝箱111');
         openChest()
     } else {
         if (ctaText.value.includes('看视频')) {
-            // console.log('看视频111');
             watchVideo()
         }
     }
@@ -307,22 +321,20 @@ function watchVideo() {
     try { (window as any).H5Bridge?.closePopup?.(dataObj) } catch { }
 }
 
-
-/** ===== 开启逻辑（发奖 & 冷却） ===== */
+/** ===== 开启逻辑(发奖 & 冷却) ===== */
 async function openChest() {
     if (!canOpen.value || openedCount.value >= TOTAL_PER_DAY) return
-    // console.log('开宝箱222')
-    const idx = openedCount.value + 1
-    const amt = chestAmountFor(idx)
-    amounts.value[idx] = amt
-    lastReward.value = amt
 
+    const idx = openedCount.value + 1
+
+    // 前端只更新计数和冷却时间,不生成金额
     openedCount.value++
     nextUnlockAt.value = Date.now() + COOLDOWN_SEC * 1000
-    videoTeaserClaimed.value = false // 新增：重置视频领取状态
+    videoTeaserClaimed.value = false // 重置视频领取状态
 
     //  开启"恭喜"展示
     celebrating.value = true
+
     //通知移动端同步开启时间
     dataObj.value = remainSec.value.toString();
     if (remainSec.value > 0) {
@@ -332,25 +344,32 @@ async function openChest() {
     }
     dataObj.type = 'open'
     dataObj.key = 'open';
-    // console.log('dataObj', dataObj)
     try { (window as any).H5Bridge?.closePopup?.(dataObj) } catch { }
 
+    // 调用后端接口,后端会生成金额
     await postChestState({
         dayKey: dayKey.value || '',
         merge: true,
-        state: { openedCount: openedCount.value, nextUnlockAt: nextUnlockAt.value, amounts: { [idx]: amt }, lastReward: amt }
+        state: {
+            openedCount: openedCount.value,
+            nextUnlockAt: nextUnlockAt.value
+            // 不再传 amounts 和 lastReward,由后端生成
+        }
     })
-    //友盟数据埋点-用户点击时
+
+    //勋盟数据埋点-用户点击时
     addOnClick({ taskId: 10003, pageName: '点击开宝箱得火花时' });
+
+    // 重新加载,获取后端生成的金额
     await load()
 
-    // 延迟关闭恭喜提示，防止立即点击
+    // 延迟关闭恭喜提示,防止立即点击
     setTimeout(() => { celebrating.value = false }, 500)
 }
 
 async function ClaimWatchRewards(payload: { transId: string; userId: string; SparkCount?: number }) {
     if (isClaiming.value) {
-        console.log('已在处理领取，请稍候');
+        console.log('已在处理领取,请稍候');
         return;
     }
 
@@ -373,16 +392,15 @@ async function ClaimWatchRewards(payload: { transId: string; userId: string; Spa
             claim({ task_id: 10003, benefit_type: '金币', claim_quantity: body.SparkCount });
         }));
 
-
     } catch (err) {
         console.error('ClaimWatchRewards 异常', err);
-        showToast('领取异常，请稍后重试');
+        showToast('领取异常,请稍后重试');
     } finally {
         isClaiming.value = false;
     }
 }
 
-/** ===== 进度条样式类（四档） ===== */
+/** ===== 进度条样式类(四档) ===== */
 const getProgressLineClass = () => {
     if (openedCount.value <= 0) return ''                  // 0%
     if (openedCount.value < 277) return 'progress-1'       // ≈33%
@@ -394,7 +412,6 @@ const getProgressLineClass = () => {
 onMounted(() => {
     //  监听 Flutter 调用
     window.H5Bridge.on('pageRefresh', (data) => {
-        // console.log('开宝箱看激励视频返回值', data);
         // 校验参数
         if (!data?.userId || !data?.transId || !data?.taskId) {
             console.warn('pageRefresh 数据不完整', data);
@@ -412,16 +429,32 @@ onMounted(() => {
             showToast('hdid不正确')
         }
     })
+
     load()
 
     //用户浏览开宝箱开始-数据埋点
     beginPageView('1', '展示开宝箱弹窗时')
     celebrating.value = false //  刷新进入页面不显示"恭喜"            
-    //  从后端拿 Redis 状态（若无则初始化）
+
+    //  从后端拿 Redis 状态(若无则初始化)
     videoMaxSpark.value = genVideoReward()
+
+    // 初始化倒计时状态
+    lastCanOpenState.value = canOpen.value
+
     timer = window.setInterval(() => {
         now.value = Date.now()
-        // 若已跨天（到达 nextResetAt），重新拉取
+
+        // 【关键】检测 canOpen 状态变化(从 false -> true)
+        const currentCanOpen = canOpen.value
+        if (!lastCanOpenState.value && currentCanOpen) {
+            // 倒计时刚结束,立即加载后端预生成的奖励
+            console.log('倒计时结束,加载奖励数据')
+            load()
+        }
+        lastCanOpenState.value = currentCanOpen
+
+        // 若已跨天(到达 nextResetAt),重新拉取
         if (nextResetAt.value && now.value >= nextResetAt.value) {
             load()
         }
@@ -448,7 +481,6 @@ const onOutsideClose = async () => {
     //用户浏览开宝箱结束-数据埋点
     beginPageView('2', '展示开宝箱弹窗时')
 
-    // closing.value = true
     setTimeout(() => { showOverlay.value = false }, 500)
 }
 
@@ -809,73 +841,7 @@ body {
     }
 }
 
-/* 移动端特殊适配 */
-@media (max-width: 480px) {
-    .overlay {
-        padding: 16px;
-    }
 
-    .top-img {
-        min-inline-size: 260px;
-        block-size: 105px;
-    }
-
-    .modal {
-        min-inline-size: 260px;
-        border-radius: 25px;
-    }
-
-    .header {
-        padding: 20px 12px 10px;
-    }
-
-    .title {
-        font-size: 18px;
-    }
-
-    .subtitle {
-        font-size: 12px;
-    }
-}
-
-/* 超小屏幕适配 */
-@media (max-width: 320px) {
-    .overlay {
-        padding: 12px;
-    }
-
-    .top-img {
-        min-inline-size: 240px;
-        block-size: 90px;
-    }
-
-    .modal {
-        min-inline-size: 240px;
-    }
-
-    .header {
-        padding: 16px 10px 8px;
-    }
-}
-
-/* 横屏适配 */
-@media (orientation: landscape) and (max-height: 600px) {
-    .overlay {
-        padding: 10px;
-    }
-
-    .modal {
-        max-block-size: calc(80vh - 60px);
-    }
-
-    .top-img {
-        block-size: 40px;
-    }
-
-    .header {
-        padding: 15px 16px 8px;
-    }
-}
 
 .outside-close {
     background-image: url(/img/public/取消按钮.svg);

@@ -1,6 +1,5 @@
 <template>
     <div class="real-name-auth-page">
-        <!-- 顶部导航栏 -->
         <van-nav-bar left-arrow @click-left="onClickLeft" safe-area-inset-top class="nav-bar">
             <template #title>
                 <span class="nav-title">实名认证</span>
@@ -8,9 +7,7 @@
         </van-nav-bar>
 
         <div class="auth-container">
-            <!-- 提示说明 -->
             <div class="auth-notice">
-
                 <p class="notice-text">
                     <van-icon name="info-o" class="notice-icon" />根据法律法规要求，请填写实名信息，实名信息将用于用户年龄判断、收益提现的报税等，以及其他场景。
                     具体见 <span class="link" @click="showAgreement">《实名认证服务协议》</span>，我们会对信息严格保密。
@@ -18,7 +15,6 @@
                 </p>
             </div>
 
-            <!-- 表单区域 -->
             <div class="form-section">
                 <van-cell-group inset>
                     <van-field v-model="form.realName" label="姓名" placeholder="请输入真实姓名" :border="false" clearable
@@ -29,7 +25,6 @@
                 </van-cell-group>
             </div>
 
-            <!-- 协议勾选 -->
             <div class="agreement-section">
                 <van-checkbox v-model="agreed" icon-size="12px">
                     <span class="agreement-text">
@@ -39,16 +34,14 @@
                 </van-checkbox>
             </div>
 
-            <!-- 提交按钮 -->
             <div class="submit-section">
                 <van-button type="primary" block round :loading="submitting" :disabled="!canSubmit"
-                    @click="handleSubmit" class="submit-btn">
+                    @click="handlePreSubmit" class="submit-btn">
                     提交
                 </van-button>
             </div>
         </div>
 
-        <!-- 协议弹窗 -->
         <van-popup v-model:show="agreementVisible" round position="bottom" :style="{ height: '100%' }">
             <div class="agreement-popup">
                 <van-nav-bar left-arrow @click-left="agreementVisible = false" safe-area-inset-top class="nav-bar">
@@ -56,9 +49,21 @@
                         <span class="nav-title">实名认证服务协议</span>
                     </template>
                 </van-nav-bar>
-                <div class="agreement-content" v-html="agreementContent">
+                <div class="agreement-content" v-html="agreementContent"></div>
+            </div>
+        </van-popup>
 
-
+        <van-popup v-model:show="showSubmitConfirm" :close-on-click-overlay="false" class="custom-confirm-popup">
+            <div class="confirm-container">
+                <div class="confirm-title">确认提交</div>
+                <div class="confirm-desc">请确认您的信息真实有效，提交后将无法修改</div>
+                <div class="confirm-btns">
+                    <button class="btn btn-cancel" @click="showSubmitConfirm = false">
+                        再检查一下
+                    </button>
+                    <button class="btn btn-confirm" @click="handleRealSubmit">
+                        确认提交
+                    </button>
                 </div>
             </div>
         </van-popup>
@@ -66,14 +71,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue'
-import { showSuccessToast, showFailToast, showConfirmDialog } from 'vant'
-import { submitRealNameAuth, getAuthStatus } from '@/api/RealNameAuth/api'
-import { useRouter, useRoute } from 'vue-router'
+import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
+import { showSuccessToast, showFailToast } from 'vant'
+import { submitRealNameAuth } from '@/api/RealNameAuth/api'
+import { useRouter } from 'vue-router'
 
 const router = useRouter()
-
-
 
 // 表单数据
 const form = reactive({
@@ -93,6 +96,9 @@ const agreementVisible = ref(false)
 
 // 提交状态
 const submitting = ref(false)
+
+// 控制自定义确认弹窗显示
+const showSubmitConfirm = ref(false)
 
 // 身份证验证正则
 const idCardRegex = /^[1-9]\d{5}(18|19|20)\d{2}((0[1-9])|(1[0-2]))(([0-2][1-9])|10|20|30|31)\d{3}[0-9Xx]$/
@@ -211,8 +217,8 @@ const agreementContent = ref(`
     </div>
 `)
 
-// 提交认证
-const handleSubmit = async () => {
+// 预提交：校验通过后显示自定义确认弹窗
+const handlePreSubmit = () => {
     // 验证表单
     if (!validateForm()) {
         return
@@ -225,22 +231,16 @@ const handleSubmit = async () => {
         return
     }
 
-    // 二次确认
-    try {
-        await showConfirmDialog({
-            title: '确认提交',
-            message: '请确认您的信息真实有效，提交后将无法修改',
-            confirmButtonText: '确认提交',
-            cancelButtonText: '再检查一下'
-        })
-    } catch {
-        return // 用户取消
-    }
+    // 显示自定义确认弹窗
+    showSubmitConfirm.value = true;
+}
 
-    // 提交
+// 真正提交认证
+const handleRealSubmit = async () => {
+    showSubmitConfirm.value = false; // 关闭弹窗
     submitting.value = true
     try {
-        const result = await submitRealNameAuth({
+        await submitRealNameAuth({
             IdCardNo: form.idCard.trim().toUpperCase(),
             RealName: form.realName.trim(),
         })
@@ -262,6 +262,29 @@ const onClickLeft = () => {
         console.error('Close page error:', e)
     }
 }
+
+/* ================= 问题1修复：处理移动端键盘收起导致页面偏移 ================= */
+onMounted(() => {
+    // 监听全局 focusout (失去焦点) 事件
+    const handleFocusOut = () => {
+        // 延时执行，确保键盘完全收起后再修正
+        setTimeout(() => {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            // 键盘收起后，强制回滚到顶部，防止留白
+            if (isIOS) {
+                window.scrollTo(0, 0);
+            }
+        }, 200);
+    }
+    document.body.addEventListener('focusout', handleFocusOut);
+
+    // 组件卸载时移除监听
+    onUnmounted(() => {
+        document.body.removeEventListener('focusout', handleFocusOut);
+    });
+})
+/* ============================================================== */
+
 </script>
 
 <style scoped lang="scss">
@@ -320,10 +343,6 @@ const onClickLeft = () => {
     display: flex;
     gap: 8px;
     padding: 12px;
-    // margin-bottom: 20px;
-    // background: #fff3e8;
-    // border-radius: 8px;
-    // border-left: 3px solid #ff976a;
 
     .notice-icon {
         flex-shrink: 0;
@@ -401,9 +420,6 @@ const onClickLeft = () => {
     justify-content: center;
     margin-bottom: 30px;
     margin-top: 30px;
-    // :deep(.van-checkbox) {
-    //     align-items: flex-start;
-    // }
 
     :deep(.van-checkbox__icon) {
         margin-top: 2px;
@@ -489,6 +505,83 @@ const onClickLeft = () => {
         :deep(strong) {
             color: #323233;
             font-weight: 600;
+        }
+    }
+}
+
+/* ================= 修复问题2：自定义提交弹窗样式 ================= */
+.custom-confirm-popup {
+    background: transparent !important;
+    width: 270px;
+    height: 167px;
+    overflow: visible;
+}
+
+.confirm-container {
+    background: #FFFFFF;
+    border-radius: 16px;
+    padding: 24px 20px 20px 20px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    .confirm-title {
+        font-family: PingFang SC;
+        font-size: 18px;
+        font-weight: 500;
+        color: #252525;
+        line-height: 25px;
+        margin-top: -5px;
+        margin-bottom: 12px;
+    }
+
+    .confirm-desc {
+        font-family: PingFang SC;
+        font-size: 14px;
+        font-weight: 400;
+        color: #999999;
+        line-height: 20px;
+        margin-bottom: 24px;
+        padding: 0 10px;
+    }
+
+    .confirm-btns {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        gap: 15px;
+
+        .btn {
+            flex: 1;
+            height: 40px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            outline: none;
+        }
+
+        .btn-cancel {
+            background: #FFFFFF;
+            border: 1px solid #FA6725;
+            color: #FA6725;
+        }
+
+        .btn-confirm {
+            background: #FA6725;
+            border: none;
+            color: #FFFFFF;
+            /* box-shadow: 0 0.51282vw 1.53846vw rgba(255, 107, 53, 0.2); */
+            width: 109px;
+            height: 42px;
+        }
+
+        .btn:active {
+            opacity: 0.8;
         }
     }
 }

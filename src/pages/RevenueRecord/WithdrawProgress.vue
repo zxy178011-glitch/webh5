@@ -43,11 +43,11 @@
                         <div class="result-row">
                             <div class="step-title-row">
                                 <span class="step-title">{{ processingTitle }}</span>
-                                <img style="margin-left: 6px;" :src="platformIconmin" class="platform-icon-min"
-                                    alt="" />
+                                <img :src="platformIconmin" class="platform-icon-min" alt="" />
                                 <div v-if="currentStatus == 3" class="step-time">
                                     审核未通过
                                 </div>
+                                <div v-else class="step-time">提现高峰期时，5个工作日内到账</div>
                             </div>
                             <div class="step-desc">
                                 <div v-if="currentStatus == 3" class="view-reason" @click="showReasonDialog">
@@ -454,6 +454,21 @@ const goToEarn = () => {
         }
     }
 
+    /* 使用背景图返回箭头 */
+    :deep(.van-nav-bar__arrow) {
+        background-image: url(/img/public/back.png);
+        background-size: 23px;
+        background-position: center;
+        background-repeat: no-repeat;
+        width: 26px;
+        height: 26px;
+    }
+
+    /*  隐藏原有的 icon 内容 */
+    :deep(.van-nav-bar__arrow::before) {
+        content: none;
+    }
+
     :deep(.van-nav-bar__arrow) {
         color: #1E1E1E;
         font-size: 18px;
@@ -472,7 +487,7 @@ const goToEarn = () => {
 .page-content {
     padding: 0;
     width: 100%;
-    border-bottom: 1px solid #F4F4F4;
+
 }
 
 /* ========== 状态卡片 ========== */
@@ -492,17 +507,8 @@ const goToEarn = () => {
         gap: 8px;
         margin-bottom: 8px;
 
-        .platform-icon-max {
-            width: 20px;
-            height: 18px;
-            object-fit: contain;
-        }
 
-        .platform-icon-min {
-            width: 16px;
-            height: 14px;
-            object-fit: contain;
-        }
+
 
         .status-title {
             font-size: 16px;
@@ -518,6 +524,19 @@ const goToEarn = () => {
         color: #323233;
         font-weight: 600;
     }
+}
+
+.platform-icon-max {
+    width: 20px;
+    height: 18px;
+    object-fit: contain;
+}
+
+.platform-icon-min {
+    width: 16px;
+    height: 14px;
+    object-fit: contain;
+    margin-left: 6px;
 }
 
 /* ========== 时间轴 ========== */
@@ -557,14 +576,14 @@ const goToEarn = () => {
 
     &.filled {
         background: #ff6b35;
-        width: 10px;
-        height: 10px;
+        width: 7px;
+        height: 7px;
     }
 
     &.processing-dot {
         background: #FFE3D7;
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
         background-image: url('/img/MyEarnings/RevenueRecord/WithdrawProgress/处理中.png');
         background-position: center;
         background-repeat: no-repeat;
@@ -573,8 +592,8 @@ const goToEarn = () => {
     }
 
     &.result-dot {
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -582,8 +601,8 @@ const goToEarn = () => {
 
         &.success-dot {
             background: #FFE3D7;
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             background-image: url('/img/MyEarnings/RevenueRecord/WithdrawProgress/完成.png');
             background-position: center;
             background-repeat: no-repeat;
@@ -616,13 +635,13 @@ const goToEarn = () => {
 
     &.hollow-gray {
         background: #FFE3D7;
-        width: 10px;
-        height: 10px;
+        width: 7px;
+        height: 7px;
     }
 }
 
 .dashed-line {
-    width: 2px;
+    width: 0.6px;
     flex: 1;
     background-image: linear-gradient(to bottom, #ff6b35 50%, transparent 50%);
     background-size: 2px 8px;
@@ -792,15 +811,16 @@ const goToEarn = () => {
     display: flex;
     justify-content: center;
     margin-top: 30px;
-    padding-bottom: 30px;
+    padding-top: 30px;
+    border-top: 1px solid #F4F4F4;
 
     :deep(.van-button) {
         background: #FA6725;
         border: none;
         height: 42px;
         width: 274px;
-        font-size: 16px;
-        font-weight: 400;
+        font-size: 14px;
+        font-weight: 500;
     }
 }
 
