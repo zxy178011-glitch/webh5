@@ -6,7 +6,7 @@
         </button> -->
         <!-- 顶部导航栏 -->
         <van-nav-bar left-arrow @click-left="goBack" safe-area-inset-top class="nav-bar">
-           
+
         </van-nav-bar>
         <!-- 贴底内容 -->
         <div class="bottom">
@@ -491,8 +491,8 @@ defineExpose({
     padding-top: 45px;
     padding-bottom: 5px;
 
-  
-     :deep(.van-nav-bar__arrow) {
+
+    :deep(.van-nav-bar__arrow) {
         color: #1E1E1E;
         font-size: 22px;
         font-weight: bold;
@@ -748,6 +748,7 @@ defineExpose({
     height: 78px;
     margin-top: -61px;
     background: url('/img/yuyue/√.png') no-repeat center center / contain;
+    background-size: 76px 78px;
 }
 
 /* 文案 */

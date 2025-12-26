@@ -13,9 +13,10 @@
             </van-nav-bar>
 
             <div class="page-content">
-                <div class="myearnings-alert" @click="goToAuth" v-if="!userBindings.isRealNameAuthenticated">
+                <div class="myearnings-alert" @click="goToAuth"
+                    v-if="bindingStatusLoaded && !userBindings.isRealNameAuthenticated">
                     <van-icon name="info-o" />
-                    <span>点击进行实名认证，提现更安心</span>
+                    <span>点击进行实名认证,提现更安心</span>
                     <van-icon name="arrow" />
                 </div>
 
@@ -90,7 +91,7 @@
                 </div>
             </div>
 
-            <van-popup v-model:show="showBindingPopup" class="custom-pink-popup" round :close-on-click-overlay="false">
+            <van-popup v-model:show="showBindingPopup" class="custom-pink-popup" round :close-on-click-overlay="true">
                 <div class="popup-wrapper">
                     <div class="content-top">
                         <h3 class="pop-title">{{ bindingInfo.title }}</h3>
@@ -105,12 +106,12 @@
                 <button class="outside-close-btn" @click="handleCloseBindingPopup"></button>
             </van-popup>
 
-            <van-popup v-model:show="showAuthPopup" class="custom-pink-popup" round :close-on-click-overlay="false">
+            <van-popup v-model:show="showAuthPopup" class="custom-pink-popup" round :close-on-click-overlay="true">
                 <div class="popup-wrapper">
                     <div class="content-top">
                         <h3 class="pop-title">实名认证</h3>
                         <div class="pop-message">
-                            完成实名认证后，提现更快更安全！<br>
+                            完成实名认证后,提现更快更安全!<br>
                         </div>
                     </div>
                     <div class="content-bottom">
@@ -152,7 +153,7 @@ import {
 } from '@/api/MyEarnings/api'
 import { beginPageView, addOnClick } from '@/utils/YMDataH5Bridge'
 
-const withdrawtips = ref('推荐使用支付宝提现，高效便捷到账快')
+const withdrawtips = ref('推荐使用支付宝提现,高效便捷到账快')
 /** 是否已上报开始埋点 */
 const hasReportedStart = ref(false)
 //领取成功弹框
@@ -166,10 +167,13 @@ const dataObj = { states: 0, page: 'MyEarnings', value: '', type: '', key: '' }
 // 加载状态
 const loading = ref(false)
 
+// 绑定状态加载完成标识
+const bindingStatusLoaded = ref(false)
+
 // 当前选择的 tab
 const activeTab = ref<string>('alipay')
 
-// 选中的提现卡片索引（用于高亮）
+// 选中的提现卡片索引(用于高亮)
 const selectedIndex = ref<number | null>(null)
 
 // 收益数据
@@ -207,7 +211,7 @@ const taskStatus = ref({
     }
 })
 
-// 提现金额选项（从接口获取）
+// 提现金额选项(从接口获取)
 const withdrawOptions = ref<Array<{
     amount: number
     badge: string
@@ -292,13 +296,15 @@ const fetchBindingStatus = async () => {
         userBindings.value.isRealNameAuthenticated = status.isRealNameAuthenticated
     } catch (error) {
         console.error('获取绑定状态失败:', error)
+    } finally {
+        bindingStatusLoaded.value = true
     }
 }
 
 /** ===== 页面交互方法 ===== */
 
 /**
- * 判断卡片是否可选：现金不足则不可选
+ * 判断卡片是否可选:现金不足则不可选
  */
 const isDisabled = (opt: any) => earnings.value.cash < opt.amount
 
@@ -350,7 +356,7 @@ onMounted(async () => {
                     claimVideoRewardAsync({ clientRefId: data.transId }).then((res => {
                         //刷新页面列表任务进度
                         fetchWithdrawOptions().then(() => {
-                            // 重新获取选项后，执行自动选择
+                            // 重新获取选项后,执行自动选择
                             autoSelectFirstAvailableOption();
                         });
                     }));
@@ -370,7 +376,7 @@ onMounted(async () => {
         fetchBindingStatus()
     ])
 
-    // 在所有数据加载完成后，执行一次默认选择
+    // 在所有数据加载完成后,执行一次默认选择
     autoSelectFirstAvailableOption()
 
     //用户浏览我的收益页面开始-数据埋点
@@ -395,11 +401,11 @@ const bindingInfo = computed(() => {
     const info = {
         wechat: {
             title: '绑定微信账号',
-            message: '绑定微信账号才可以进行提现，只需绑定一次，后续均提现至该微信账号'
+            message: '绑定微信账号才可以进行提现,只需绑定一次,后续均提现至该微信账号'
         },
         alipay: {
             title: '绑定支付宝账号',
-            message: '绑定支付宝账号才可以进行提现，只需绑定一次，后续均提现至该支付宝账号'
+            message: '绑定支付宝账号才可以进行提现,只需绑定一次,后续均提现至该支付宝账号'
         }
     }
     return info[bindingMethod.value as 'wechat' | 'alipay'] || info.wechat
@@ -536,17 +542,17 @@ const onClickLeft = () => {
 /** ===== 规则弹窗 ===== */
 const showRule = ref(false)
 const ruleList = ref([
-    '1.本平台提供现金提现功能，可提取到您的支付账户(如微信、支付宝账户等，以页面实际展示为准)。',
-    '2.用户收益达到最低提现金额要求后，可以申请提现。我们将在提现页面内设置固定提现额度(具体金额以页面展示为准)，固定提现额度每日仅可择一使用一次，总次数不限。每次提现时您可以选择所需的一档进行提现，仅当前金额超过发起提现的金额才可以申请提现，剩余金额可在下次满足前述提现额度时申请提现。特别而言，我们可能向新用户下发单次小额提现福利(如1元)，新人提现额度为单次福利，仅限新用户使用一次。同时，为了给您提供更好的福利提现体验，围炉小说将不时对部分或者全部(新)用户提供临时提现额度或满足一定要求可提现的额度，如用户获得此类额度，使用次数有限制，具体要求、额度及次数限制请以页面展示为准。',
-    '3. 如果用户需要通过支付宝等第三方支付账号提现，需按照要求绑定第三方支付账号并填写提现金额或其他提现所需信息，请确保提供的信息准确无误，以免提现失败。如果用户需要通过银行卡提现，需按照第三方支付机构的页面要求完成实名认证、添加银行卡并填写提现金额。请确保提供的信息准确无误，以免提现失败。',
-    '4.提现一般3~5天内到账(您理解并同意如遇提现高峰或节假日，提现到账时间会延长)。活动高峰期间，由于网络拥堵，用户可能存在短时间内无法提现的情况。平台将尽最大努力及时恢复提现功能，但无需因此承担任何责任。',
-    '5.为保证用户顺利提现，提现需用户按照提现页面规范操作，如用户未按提现要求操作或不符合第三方支付平台的要求等原因导致不能收款(如未做实名认证或提现前与平台账号解绑等)，所获得的金币等将无法提现，本平台无需承担任何责任。',
-    '6.若您连续15个白然日未进入任务页面、或连续15个自然日未领取任何活动连续您的所有福利将过期，逾期未提现则视奖励的(任一)，那么此前本平台发放给为用户自愿放弃提现的权利，现金账户金额将被清零，平台将不会也无义务给予任何形式的补偿。',
-    '7.未成年人用户应在其监护人的陪同下使用本 APP 并应在征得其监护人的同意后进行，用户均应确保提供的信息准确无误，如因填写信息错误等非本平台原连弃全部金额，平台不承担责任。因导致不能提现/兑换，视为用户自愿放弃全部金额，平台不承担责任。',
-    '8.我们应用先进的人工智能分析您的行为，在提现/兑换过程中，为更好的保护用户账号及相关资产的安全，本平台有权审核您的订单，对您的提现的次数、金额和/或账号的数量进行限制，并随时提高安全校验措施(包括但不限于短信验证、身份验证等手段)，如您未能通过安全校验，则将无法提现/兑换，如发现造假或其他不正当手段及舞弊行为，我们有权阻止您使用(填写邀请码、领取金币、提现、获取红包)以及取消您获得的红包。用户应自行承担因此不能提现/兑换所导致的不利后果，本平台对此不承担责任。',
-    '9.用户通过平台举办的活动获得收益或奖励的，平台可能需要为用户代扣代缴税款或办理纳税申报。为履行上述法定义务，平台需依照税务机关实际要求，收集并提供用户实名信息、收益金额等涉税信息和资料。如用户未向平台提供信息或提供错误信息，可能导致平台无法办理，用户应自行申报纳税，由此造成的其他不利后果由用户自行承担。',
-    '10.平台现行有效的《用户协议》《隐私政策》以及日常活动规则(统称为「前述协议」)同样适用。本规则及相关条款与前述协议相冲突的，以本规则为准;本规则未约定的内容，仍以前述协议为准。',
-    '11.在法律法规允许的范围内，平台有权。对本规则进行变动或调整，相关变动或调整将公布在规则页面上，并于公布时即时生效，用户继续参与活动则视为同意并接受变动或者调整后的规则。如果用户拒绝规则的变更或者调整，请放弃参与变更后的活动。'
+    '1.本平台提供现金提现功能,可提取到您的支付账户(如微信、支付宝账户等,以页面实际展示为准)。',
+    '2.用户收益达到最低提现金额要求后,可以申请提现。我们将在提现页面内设置固定提现额度(具体金额以页面展示为准),固定提现额度每日仅可择一使用一次,总次数不限。每次提现时您可以选择所需的一档进行提现,仅当前金额超过发起提现的金额才可以申请提现,剩余金额可在下次满足前述提现额度时申请提现。特别而言,我们可能向新用户下发单次小额提现福利(如1元),新人提现额度为单次福利,仅限新用户使用一次。同时,为了给您提供更好的福利提现体验,围炉小说将不时对部分或者全部(新)用户提供临时提现额度或满足一定要求可提现的额度,如用户获得此类额度,使用次数有限制,具体要求、额度及次数限制请以页面展示为准。',
+    '3. 如果用户需要通过支付宝等第三方支付账号提现,需按照要求绑定第三方支付账号并填写提现金额或其他提现所需信息,请确保提供的信息准确无误,以免提现失败。如果用户需要通过银行卡提现,需按照第三方支付机构的页面要求完成实名认证、添加银行卡并填写提现金额。请确保提供的信息准确无误,以免提现失败。',
+    '4.提现一般3~5天内到账(您理解并同意如遇提现高峰或节假日,提现到账时间会延长)。活动高峰期间,由于网络拥堵,用户可能存在短时间内无法提现的情况。平台将尽最大努力及时恢复提现功能,但无需因此承担任何责任。',
+    '5.为保证用户顺利提现,提现需用户按照提现页面规范操作,如用户未按提现要求操作或不符合第三方支付平台的要求等原因导致不能收款(如未做实名认证或提现前与平台账号解绑等),所获得的金币等将无法提现,本平台无需承担任何责任。',
+    '6.若您连续15个白然日未进入任务页面、或连续15个自然日未领取任何活动连续您的所有福利将过期,逾期未提现则视奖励的(任一),那么此前本平台发放给为用户自愿放弃提现的权利,现金账户金额将被清零,平台将不会也无义务给予任何形式的补偿。',
+    '7.未成年人用户应在其监护人的陪同下使用本 APP 并应在征得其监护人的同意后进行,用户均应确保提供的信息准确无误,如因填写信息错误等非本平台原连弃全部金额,平台不承担责任。因导致不能提现/兑换,视为用户自愿放弃全部金额,平台不承担责任。',
+    '8.我们应用先进的人工智能分析您的行为,在提现/兑换过程中,为更好的保护用户账号及相关资产的安全,本平台有权审核您的订单,对您的提现的次数、金额和/或账号的数量进行限制,并随时提高安全校验措施(包括但不限于短信验证、身份验证等手段),如您未能通过安全校验,则将无法提现/兑换,如发现造假或其他不正当手段及舞弊行为,我们有权阻止您使用(填写邀请码、领取金币、提现、获取红包)以及取消您获得的红包。用户应自行承担因此不能提现/兑换所导致的不利后果,本平台对此不承担责任。',
+    '9.用户通过平台举办的活动获得收益或奖励的,平台可能需要为用户代扣代缴税款或办理纳税申报。为履行上述法定义务,平台需依照税务机关实际要求,收集并提供用户实名信息、收益金额等涉税信息和资料。如用户未向平台提供信息或提供错误信息,可能导致平台无法办理,用户应自行申报纳税,由此造成的其他不利后果由用户自行承担。',
+    '10.平台现行有效的《用户协议》《隐私政策》以及日常活动规则(统称为「前述协议」)同样适用。本规则及相关条款与前述协议相冲突的,以本规则为准;本规则未约定的内容,仍以前述协议为准。',
+    '11.在法律法规允许的范围内,平台有权。对本规则进行变动或调整,相关变动或调整将公布在规则页面上,并于公布时即时生效,用户继续参与活动则视为同意并接受变动或者调整后的规则。如果用户拒绝规则的变更或者调整,请放弃参与变更后的活动。'
 ])
 
 const showRulePopup = () => {
@@ -567,10 +573,10 @@ const handleTabClick = (name: string) => {
 const onTabChange = (name: string | number) => {
     const method = name === 'wechat' ? '微信' : '支付宝'
     if (method == '微信') {
-        withdrawtips.value = '微信提现系统审核通过后需点击确认提现按钮才能提现到账成功，注意⚠️请在24小时内完成提现'
+        withdrawtips.value = '注意⚠️请在24小时内完成订单的确认收款'
     }
     else if (method == '支付宝') {
-        withdrawtips.value = '推荐使用支付宝提现，高效便捷到账快'
+        withdrawtips.value = '推荐使用支付宝提现,高效便捷到账快'
     }
     //友盟数据埋点-用户点击时
     addOnClick({ taskId: 0, pageName: '点击' + method + '提现时' });
@@ -580,8 +586,9 @@ const onTabChange = (name: string | number) => {
  * 实名认证 (已修改为显示自定义弹窗)
  */
 const goToAuth = () => {
-    // 替换原有的 showDialog，改为显示自定义弹窗
-    showAuthPopup.value = true
+    // // 替换原有的 showDialog,改为显示自定义弹窗
+    // showAuthPopup.value = true
+    router.push('/RealNameAuth')
 }
 
 /**
@@ -593,10 +600,16 @@ const handleGoRealNameAuth = () => {
 }
 
 /**
- * 点击卡片：设置选中态
+ * 点击卡片:设置选中态
  */
 const onSelect = (option: any, idx: number) => {
-    if (isDisabled(option)) return
+    if (isDisabled(option)) {
+        showToast({
+            message:'余额少于提现档位',
+            position:'top'
+        })
+        return
+    }
     selectedIndex.value = idx
 }
 
@@ -606,7 +619,7 @@ const onSelect = (option: any, idx: number) => {
 const handleActionBtn = () => {
     // 检查余额不足
     if (isInsufficientBalance.value) {
-        showToast('余额不足，无法提现')
+        showToast('余额不足,无法提现')
         return
     }
 
@@ -618,7 +631,8 @@ const handleActionBtn = () => {
 
     //验证是否实名
     if (!userBindings.value.isRealNameAuthenticated) {
-        showToast('请先进行实名认证')
+        // showToast('请先进行实名认证')
+        showAuthPopup.value = true
         return
     }
     const option = currentSelectedOption.value
@@ -655,7 +669,7 @@ const handleActionBtn = () => {
 }
 
 /**
- * 进行提现（需要检查绑定）
+ * 进行提现(需要检查绑定)
  */
 const proceedWithdraw = (amount: number, condition: string) => {
     const method = activeTab.value
@@ -686,7 +700,7 @@ const showBindingDialog = (method: string, methodName: string) => {
 const confirmWithdraw = (amount: number, methodName: string, condition: string) => {
     showDialog({
         title: '确认提现',
-        message: `确认提现 ${amount.toFixed(2)} 元至${methodName}？`,
+        message: `确认提现 ${amount.toFixed(2)} 元至${methodName}?`,
         confirmButtonText: '确认',
         cancelButtonText: '取消',
         showCancelButton: true
@@ -704,10 +718,11 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
                 condition
             }
             await validateWithdraw(params)
-            var data = await createWithdraw(params)
-
-            showToast('提现申请成功！')
-
+            var refId = '';
+            await createWithdraw(params).then((res => {
+                refId = res.refId;
+                showToast('提现申请成功!')
+            }))
             await Promise.all([
                 fetchRevenueRecords(),
                 fetchWithdrawOptions()
@@ -716,7 +731,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 
             router.push({
                 path: '/WithdrawProgress',
-                query: { Id: data.refId }
+                query: { Id: refId }
             })
         } catch (error) {
             showToast(error instanceof Error ? error.message : String(error))

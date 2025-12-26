@@ -2,12 +2,9 @@
     <div class="page">
         <div v-if="stage === 'countdown'" class="countdown-wrap">
             <div class="gold-header"></div>
-            <div class="cd-text">
-                <div>红包雨来袭</div>
-                <div class="sub">倒计时</div>
-            </div>
-            <div class="cd-num">{{ count }}</div>
+            <div class="cd-text"></div>
             <div class="bk-img">
+                <div class="cd-num">{{ count }}</div>
                 <img class="cd-hero" src="/img/hongbaoyu/ring-bag.png" alt="ring bag" />
             </div>
         </div>
@@ -27,14 +24,19 @@
                     <img v-if="showChrome" class="coins-bg" src="/img/hongbaoyu/coins-bottom.png" alt="coins" />
                 </div>
 
-                <div v-for="p in packets" :key="p.id" :ref="(el) => setPacketRef(el, p.id)" class="packet"
-                    @touchstart.stop.prevent="hit(p)">
+                <div v-for="p in packets" :key="p.id" :ref="(el) => setPacketRef(el, p.id)" class="packet" :style="{
+                    transform: `translate3d(${p.x}px, ${p.y}px, 0)`,
+                    opacity: p.opacity
+                }" @touchstart.stop.prevent="hit(p)">
                     <img src="/img/hongbaoyu/bag.png" alt="bag" />
                 </div>
 
                 <div v-for="c in coins" :key="c.id" :ref="(el) => setCoinRef(el, c.id)" class="coin" :style="{
                     '--sway-dur': c.swayDur + 'ms',
-                    '--sway-amp': c.swayAmp + 'px'
+                    '--sway-amp': c.swayAmp + 'px',
+                    top: c.y + 'px',
+                    left: c.x + 'px',
+                    opacity: c.opacity
                 }">
                     <img class="coin-img" src="/img/hongbaoyu/金币.png" alt="coin" :class="{ rev: c.rev }"
                         :style="{ '--spin-dur': c.spinDur + 'ms' }" />
@@ -89,7 +91,8 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, shallowR
 import { InsertSpark, ClaimWatchReward } from '../../api/public/api'
 import { showToast } from 'vant'
 import { beginPageView, claim, addOnClick } from '@/utils/YMDataH5Bridge'
-/* --------- 状态定义 --------- */
+
+/* 状态定义 */
 const stage = ref('countdown')
 const count = ref(3)
 const score = ref(0)
@@ -98,21 +101,21 @@ const remain = ref(10)
 const startTs = ref(0)
 
 const zoneHeights = reactive({
-    rain: 'clamp(32dvh, 42dvh, 48dvh)',
-    fade: 'clamp(18dvh, 24dvh, 28dvh)',
+    rain: 'clamp(43dvh, 56dvh, 64dvh)',  // 增加了1/3的高度
+    fade: 'clamp(12dvh, 16dvh, 19dvh)',  // 减少了1/3的高度
     coins: 'max(22dvh, 160px)'
 })
 
 const dataObj = reactive({ states: 0, page: 'hongbaoyu', value: '', type: '', key: '' })
 
-/* 优化核心：使用 shallowRef 
-   Vue 不会深度监听数组内部对象的属性变化（如 x, y），避免 tick 循环时的响应式开销。
-   我们需要手动操作 DOM 来更新位置。
+/* 核心优化：使用 shallowRef 提升性能
+   Vue 不会深度监听内部对象属性（如 x, y），避免 tick 循环中的响应式开销。
+   我们手动操作 DOM 来更新位置。
 */
 const packets = shallowRef([])
 const coins = shallowRef([])
 
-/* DOM 引用缓存 Map */
+/* 缓存 DOM 引用 */
 const packetRefs = new Map()
 const coinRefs = new Map()
 const zoneRef = ref(null)
@@ -123,13 +126,14 @@ const lastSpawnMs = ref(0)
 const spawnGapMin = ref(360)
 const spawnGapMax = ref(420)
 
-// 缓存区域尺寸，避免在 tick 中重复计算
+// 缓存区域尺寸，避免在 tick 循环中重复计算
 let cachedZoneW = 375
 let cachedZoneH = 667
 let cachedRainH = 300
 let cachedFadeH = 150
+let cachedHeaderH = 0
 
-// UI / 结算
+// UI / 结果计算
 const showChrome = ref(true)
 const showResult = ref(false)
 const rewardFactor = ref(0)
@@ -147,7 +151,7 @@ const progressPct = computed(() => {
     return Math.min(100, Math.round(used * 100))
 })
 
-/* --------- 辅助函数 --------- */
+/* 辅助函数 */
 function rand(a, b) {
     return Math.floor(Math.random() * (b - a + 1)) + a
 }
@@ -162,15 +166,22 @@ const setCoinRef = (el, id) => {
     else coinRefs.delete(id)
 }
 
-/* --------- 核心逻辑 --------- */
+/* 核心游戏逻辑 */
 
-// 更新尺寸缓存
+// 更新区域尺寸缓存
 function updateZoneMetrics() {
     if (!zoneRef.value) return
     const rect = zoneRef.value.getBoundingClientRect()
     cachedZoneW = rect.width
     cachedZoneH = rect.height
-    // 获取子区域高度（近似值或直接获取 DOM）
+
+    // 获取头部高度
+    const header = document.querySelector('.rain-header')
+    if (header) {
+        cachedHeaderH = header.offsetHeight
+    }
+
+    // 获取子区域高度
     const children = zoneRef.value.children
     if (children && children.length >= 2) {
         cachedRainH = children[0].offsetHeight
@@ -180,16 +191,16 @@ function updateZoneMetrics() {
 
 function spawnPacket() {
     const x = rand(8, Math.max(8, cachedZoneW - 78))
-    // 纯数据对象，不需要响应式
+    // 从屏幕上方开始，让红包逐渐滑入视野
+    // 红包高度是 90px，所以从 -90 开始，从顶部边缘进入
     packets.value.push({
         id: nextId.value++,
         x,
-        y: -90,
-        opacity: 1,
-        hit: false, // 标记是否被点击
+        y: -90,  // 从屏幕上方开始，会滑入视野
+        opacity: 0.3,  // 开始时半透明（被头部遮挡）
+        hit: false,
         lastNow: 0
     })
-    // 触发 shallowRef 更新 DOM 列表
     triggerRef(packets)
 }
 
@@ -211,20 +222,20 @@ function makeCoin(x, y) {
     triggerRef(coins)
 }
 
-// 点击处理：touchstart 触发
+// 触摸事件处理
 function hit(p) {
-    if (p.hit) return // 防止连点
+    if (p.hit) return // 防止双击
     p.hit = true
     score.value++
 
-    // 立即隐藏 DOM（视觉反馈最优先）
+    // 立即隐藏 DOM（视觉反馈优先）
     const el = packetRefs.get(p.id)
     if (el) el.style.opacity = '0'
 
     makeCoin(p.x + 28, p.y + 40)
 
-    // 注意：这里不直接 splice，防止在 touch 事件中引起大的重排卡顿
-    // 仅仅标记 p.hit = true，让 tick 循环在下一帧清理它
+    // 注意：不要在这里 splice，避免触摸事件期间的重布局
+    // 只标记 p.hit = true，让 tick 循环在下一帧清理
 }
 
 function onRainEnd() {
@@ -239,7 +250,7 @@ function onRainEnd() {
 
 /* 优化的帧循环 */
 function tick(now) {
-    // 如果没有 DOM 引用，跳过
+    // 如果没有 DOM 引用则跳过
     if (!zoneRef.value) {
         rafId.value = requestAnimationFrame(tick)
         return
@@ -263,11 +274,11 @@ function tick(now) {
     let needUpdateCoins = false
 
     // --- 更新红包 ---
-    // 倒序循环方便删除
+    // 反向循环便于移除
     for (let i = packets.value.length - 1; i >= 0; i--) {
         const p = packets.value[i]
 
-        // 如果已经被点击（hit），直接移除
+        // 如果已被点击，立即移除
         if (p.hit) {
             packets.value.splice(i, 1)
             needUpdatePackets = true
@@ -278,26 +289,42 @@ function tick(now) {
         p.lastNow = now
         p.y += speed * dt
 
-        // 边界判断
-        if (p.y >= rainEnd && p.y <= fadeEnd) {
+        // 透明度效果：在头部区域半透明，下方完全可见
+        // 头部在 cachedHeaderH 结束，红包高度 90px
+        const packetBottom = p.y + 90  // 红包底部边缘
+
+        if (packetBottom < cachedHeaderH) {
+            // 整个红包在头部区域内：半透明
+            // 随着在头部下落逐渐增加透明度
+            const headerProgress = Math.max(0, p.y + 90) / cachedHeaderH
+            p.opacity = 0.3 + (headerProgress * 0.3)  // 0.3 → 0.6
+        } else if (p.y < cachedHeaderH) {
+            // 红包部分露出头部：过渡区域
+            const visibleHeight = packetBottom - cachedHeaderH
+            const transitionProgress = visibleHeight / 90
+            p.opacity = 0.6 + (transitionProgress * 0.4)  // 0.6 → 1.0
+        } else if (p.y >= rainEnd && p.y <= fadeEnd) {
+            // 在渐隐区域（底部区域）淡出
             const k = (p.y - rainEnd) / (fadeEnd - rainEnd)
             p.opacity = Math.max(0, 1 - k)
         } else if (p.y > fadeEnd) {
             p.opacity = 0
+        } else {
+            // 在主雨区完全可见
+            p.opacity = 1
         }
 
-        // 移除屏幕外
+        // 移除屏幕外的红包
         if (p.y > cachedZoneH + 120 || p.opacity <= 0.01) {
             packets.value.splice(i, 1)
             needUpdatePackets = true
             continue
         }
 
-        // 直接 DOM 操作 (Transform + Opacity)
-        // 这是性能优化的关键：绕过 Vue 响应式更新 Style
+        // 直接操作 DOM 实现平滑动画
+        // 注意：我们也在模板中设置初始样式以防止闪烁
         const el = packetRefs.get(p.id)
         if (el) {
-            // 使用 translate3d 开启 GPU 加速
             el.style.transform = `translate3d(${p.x}px, ${p.y}px, 0)`
             el.style.opacity = p.opacity
         }
@@ -312,7 +339,6 @@ function tick(now) {
         c.y += (c.vy || 0) * dt
         const lived = (now - c.start) / 1000
         c.opacity = Math.max(0, 1 - lived / 2)
-        // c.scale = Math.max(.85, 1 - lived * 0.1) // 缩放可选，如果觉得卡可以去掉
 
         if (lived >= 2 || c.y > cachedZoneH + 120) {
             coins.value.splice(i, 1)
@@ -322,26 +348,14 @@ function tick(now) {
 
         const el = coinRefs.get(c.id)
         if (el) {
-            // 保持原本 CSS 动画的同时更新位置
-            // 注意：因为金币有 CSS animation (sway)，我们只控制 top/left 对应的 transform
-            // 如果 transform 冲突，需要用外层容器包一层，或者只改 top/left。
-            // 优化方案：这里为了不破坏 CSS sway 动画，我们只能更新 top/left 
-            // 现在的 .coin 是 absolute，直接改 left/top 性能不如 transform，
-            // 但因为 sway 用了 transform，所以这里用 left/top 兼容原来的 CSS 动画
-            // 或者：el.style.top = c.y + 'px'; el.style.left = c.x + 'px';
-            // 为了更流畅，建议：使用 transform (translate3d) 控制位移，
-            // 而金币内部 img 负责自转，摇摆动画改为 JS 计算或者嵌套 div。
-            // ** 鉴于不想改效果太复杂，这里用 transform 会覆盖 sway 动画 **
-            // ** 所以金币这里回退到 top/left 方案，或者将位置应用在 style 上 **
-
-            // 修正：为了保持原效果(sway)，我们还是修改 top/left，但是通过 style 直接改，不通过 vue
+            // 通过内联样式更新位置
             el.style.top = c.y + 'px'
             el.style.left = c.x + 'px'
             el.style.opacity = c.opacity
         }
     }
 
-    // 只有在数组长度变化时通知 Vue 更新 DOM 列表
+    // 仅在数组长度变化时触发 Vue 更新 DOM 列表
     if (needUpdatePackets) triggerRef(packets)
     if (needUpdateCoins) triggerRef(coins)
 
@@ -380,13 +394,13 @@ function beginRain() {
     })
 }
 
-// 停止时清理
+// 卸载时清理
 onBeforeUnmount(() => {
     cancelAnimationFrame(rafId.value)
     window.removeEventListener('resize', updateZoneMetrics)
 })
 
-/* API 交互部分保持不变 */
+/* API 交互 */
 function onWatchVideo() {
     try {
         dataObj.type = 'ShowVedioAD'
@@ -396,10 +410,10 @@ function onWatchVideo() {
         beginPageView('2', '展示红包雨弹窗时');
     } catch { }
 }
+
 function onDirectReceive() {
     const model = { ObtainType: 5, ObtainCount: baseReward.value, ObtainContent: '红包雨获得' }
     const message = `+${baseReward.value}  火花`
-    //友盟数据埋点-用户点击时
     addOnClick({ taskId: 10005, pageName: '点击火花红包雨去领取时' });
     InsertSpark(model).then((res) => {
         try {
@@ -412,17 +426,18 @@ function onDirectReceive() {
         beginPageView('2', '展示红包雨弹窗时');
     })
 }
+
 function ClaimWatchRewards(model) {
     ClaimWatchReward(model).then((res) => {
         try {
             showResult.value = false
             showClaimSuccess.value = true;
             displayAmount.value = model.sparkCount;
-            //权益领取数据埋点
             claim({ task_id: 10005, benefit_type: '金币', claim_quantity: model.sparkCount });
         } catch { }
     })
 }
+
 function closeClaimPopup() {
     showClaimSuccess.value = false
     dataObj.type = ''
@@ -430,6 +445,7 @@ function closeClaimPopup() {
     dataObj.value = ''
     window.H5Bridge?.closePage?.(dataObj)
 }
+
 onMounted(() => {
     const tickInterval = setInterval(() => {
         if (count.value <= 1) {
@@ -458,9 +474,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 原样式保留，只修改 packet 和 coin 的定位方式相关 */
-
-/* ... (保留你的 :root, .page 等所有基础样式) ... */
 :root {
     --mask-rgba: 0, 0, 0;
     --mask-alpha: .7;
@@ -498,14 +511,14 @@ onMounted(() => {
     content: "";
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, .7);
+    background: rgba(0, 0, 0, .3);
     backdrop-filter: blur(1px);
     -webkit-backdrop-filter: blur(1px);
     z-index: -2;
     pointer-events: none;
 }
 
-/* ... Countdown 样式保持不变 ... */
+/* 倒计时样式 */
 .countdown-wrap {
     position: relative;
     min-height: 100vh;
@@ -524,11 +537,15 @@ onMounted(() => {
 }
 
 .cd-text {
-    margin-top: 15vh;
+    margin-top: 116px;
     line-height: 1.2;
     text-align: center;
     color: #FCEDC2;
     text-shadow: 0 10px 28px rgba(0, 0, 0, .35), 0 0 18px rgba(255, 234, 180, .95);
+    background: url('/img/hongbaoyu/标题文案.png') no-repeat center top / cover;
+    width: 235px;
+    height: 117px;
+    background-size: contain;
 }
 
 .cd-text>div:first-child {
@@ -547,16 +564,20 @@ onMounted(() => {
 .cd-num {
     margin: 20px 0 40px 0;
     color: #FCEDC2;
-    font-size: clamp(56px, 9vh, 86px);
-    font-weight: 900;
-    line-height: 1;
-    text-shadow: 0 10px 28px rgba(0, 0, 0, .35), 0 0 18px rgba(255, 234, 180, .95);
+    font-family: Inter;
+    font-weight: 600;
+    font-style: Semi Bold;
+    font-size: 76px;
+    leading-trim: NONE;
+    line-height: 100%;
+    letter-spacing: 0px;
+    text-align: center;
 }
 
 .bk-img {
     position: relative;
-    width: clamp(240px, 72vw, 340px);
-    height: clamp(260px, 38vh, 420px);
+    width: 290px;
+    height: 486px;
     margin-top: 4px;
     background: url('/img/hongbaoyu/线条.png') no-repeat center / cover;
 }
@@ -565,10 +586,12 @@ onMounted(() => {
     position: absolute;
     inset: 50% auto auto 50%;
     transform: translate(-50%, -50%);
-    height: auto;
+    height: 318px;
+    width: 390px;
+    margin-top: 25px;
 }
 
-/* ... Rain Header 样式保持不变 ... */
+/* 红包雨视图样式 */
 .rain-wrap {
     min-height: 100vh;
     display: flex;
@@ -581,22 +604,33 @@ onMounted(() => {
     height: 20vh;
     padding-top: calc(var(--safe-top) + 6px);
     background: url('/img/hongbaoyu/顶部背景.png') no-repeat center top / cover;
+    z-index: 1;
+    pointer-events: none;
 }
 
 .timer-bar.in-header {
-    width: 88%;
+    width: 100%;
     display: flex;
     align-items: center;
     gap: 10px;
     margin-top: 8vh;
+    pointer-events: auto;
+    justify-content: center;
 }
 
 .timer-bar .label {
-    width: 56px;
+    font-family: Inter;
+    font-weight: 600;
+    font-style: Semi Bold;
+    font-size: 24px;
+    leading-trim: NONE;
+    line-height: 100%;
+    letter-spacing: 0px;
     text-align: right;
-    font-weight: 700;
-    color: #FFE9B6;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+    width: 45px;
+    height: 29px;
+    color: #FFFFFF;
+    padding-right: 10px;
 }
 
 .timer-bar .bar {
@@ -604,15 +638,17 @@ onMounted(() => {
     --bar-pad: 3px;
     position: relative;
     flex: 1;
-    height: var(--bar-h);
-    padding: var(--bar-pad);
+    height: 28px;
+    max-width: 248px !important;
+    padding: 0 5px;
     border-radius: 999px;
     overflow: hidden;
-    background: linear-gradient(180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, .10));
-    border: 1px solid rgba(255, 255, 255, .65);
+    border: 0.64px solid #FFF3D0;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), inset 0 -3px 8px rgba(0, 0, 0, .28), 0 2px 10px rgba(0, 0, 0, .08);
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
 }
 
 .timer-bar .bar::before {
@@ -620,7 +656,15 @@ onMounted(() => {
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .28), inset 0 10px 16px rgba(255, 255, 255, .08);
+    background: linear-gradient(180deg,
+            rgba(255, 255, 255, 0.8) 0%,
+            rgba(255, 255, 255, 0) 15%,
+            rgba(255, 255, 255, 0) 85%,
+            rgba(255, 255, 255, 0.8) 100%);
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, .28),
+        inset 0 10px 16px rgba(255, 255, 255, .08),
+        inset 0 -10px 16px rgba(255, 255, 255, .08);
     pointer-events: none;
     z-index: 1;
 }
@@ -629,10 +673,10 @@ onMounted(() => {
     position: relative;
     z-index: 2;
     display: block;
-    height: calc(var(--bar-h) - var(--bar-pad) * 2);
+    height: 19px;
     border-radius: 999px;
     transition: width .2s linear;
-    background: linear-gradient(90deg, #ff5a32 0%, #ff6a38 35%, #ff7e46 62%, #ffe5cf 100%);
+    background: linear-gradient(180deg, #FFE9D5 0%, #FF3F05 100%);
     box-shadow: 0 4px 10px rgba(255, 94, 50, .32), inset 0 1px 0 rgba(255, 255, 255, .55);
 }
 
@@ -642,34 +686,51 @@ onMounted(() => {
     right: -2px;
     top: 0;
     bottom: 0;
-    width: 26px;
+    width: 36.92px;
     border-radius: inherit;
-    background: radial-gradient(20px 20px at 65% 50%, rgba(255, 255, 255, .95), rgba(255, 255, 255, .45) 60%, rgba(255, 255, 255, 0) 72%);
+    background: linear-gradient(270deg, #FFF0DB 0%, rgba(255, 240, 219, 0) 77.78%);
     filter: blur(.2px);
 }
 
 .zones {
-    position: relative;
-    flex: 1 1 auto;
+    position: fixed;
+    inset: 0;
     overflow: hidden;
     background: transparent;
     padding-bottom: env(safe-area-inset-bottom, 0px);
+    z-index: 10;
+    pointer-events: none;
 }
 
 .zone {
-    position: relative;
+    position: absolute;
+    width: 100%;
+    pointer-events: none;
+}
+
+.rain-zone {
+    top: 0;
+}
+
+.fade-zone {
+    top: 0;
+}
+
+.coins-zone {
+    bottom: 0;
 }
 
 .coins-zone {
     height: 20vh;
-    position: relative;
+    position: absolute;
+    bottom: 0;
+    width: 100%;
     overflow: visible;
 }
 
 .coins-bg {
     position: absolute;
     left: 50%;
-    bottom: max(6vh, env(safe-area-inset-bottom, 0px));
     transform: translateX(-50%);
     width: min(120vw, 780px);
     height: auto;
@@ -677,19 +738,17 @@ onMounted(() => {
     filter: drop-shadow(0 10px 16px rgba(0, 0, 0, .35));
 }
 
-/* --- 核心优化 CSS 修改 --- */
+/* 核心优化：红包定位 */
 .packet {
     position: absolute;
-    width: 74px;
-    height: 90px;
+    width: 60px;
+    height: 76px;
     filter: drop-shadow(0 10px 16px rgba(0, 0, 0, .35));
-    /* 去掉 will-change，或者只保留 transform，不要 transition top/left */
-    will-change: transform;
+    will-change: transform, opacity;
     pointer-events: auto;
-    /* 初始在屏幕外，完全靠 JS transform 控制位置，避免初始渲染闪烁 */
     top: 0;
     left: 0;
-    transform: translate3d(0, -200px, 0);
+    z-index: 100;
 }
 
 .packet::before {
@@ -698,7 +757,6 @@ onMounted(() => {
     inset: -12px;
     background: transparent;
     pointer-events: auto;
-    /* 增大点击热区 */
 }
 
 .packet img {
@@ -715,9 +773,7 @@ onMounted(() => {
     pointer-events: none;
     animation: coin-sway var(--sway-dur, 1200ms) ease-in-out infinite alternate;
     filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .28)) drop-shadow(0 0 8px rgba(255, 220, 120, .35));
-    /* 金币位置由 JS 控制 left/top，摇摆由 CSS 动画控制 */
-    top: 0;
-    left: 0;
+    z-index: 100;
 }
 
 .coin-img {
@@ -747,7 +803,7 @@ onMounted(() => {
     }
 }
 
-/* ... 结算弹窗样式保持不变 ... */
+/* Result dialog styles */
 :deep(.hb-dialog.van-dialog) {
     background: transparent !important;
     box-shadow: none !important;
@@ -778,7 +834,7 @@ onMounted(() => {
     font-size: 32px;
     line-height: 100%;
     color: #FFF5D6;
-    text-shadow: 0 2px 12px rgba(0, 0, 0, .35);
+    /* text-shadow: 0 2px 12px rgba(0, 0, 0, .35); */
 }
 
 .hb-sub {
@@ -790,27 +846,37 @@ onMounted(() => {
 }
 
 .hb-sub .plus {
-    font-size: 26px;
-    font-weight: 900;
-    color: #fff7e0;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+    color: #FFF9CE;
+    /* text-shadow: 0 0.51282vw 2.5641vw rgba(0, 0, 0, .35); */
+    font-family: PingFang SC;
+    font-weight: 600;
+    font-style: Semibold;
+    font-size: 30px;
+    leading-trim: NONE;
+    line-height: 100%;
+    letter-spacing: 0px;
+    text-align: right;
 }
 
 .hb-sub .num {
-    font-size: 36px;
-    font-weight: 900;
+    font-size: 48px;
+    font-weight: 600;
     line-height: 1;
-    background: linear-gradient(180deg, #fff9e0, #ffd68a);
+    background: #FFF9CE;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    text-shadow: 0 8px 28px rgba(0, 0, 0, .35);
 }
 
 .hb-sub .unit {
-    font-size: 16px;
-    color: #ffe7b8;
-    font-weight: 700;
+    font-family: PingFang SC;
+    font-weight: 500;
+    font-style: Medium;
+    font-size: 18px;
+    leading-trim: NONE;
+    line-height: 100%;
+    letter-spacing: 0px;
+    color: #FFF9CE;
 }
 
 .hb-cards {
@@ -916,15 +982,17 @@ onMounted(() => {
 
 .btn-primary {
     width: 228px;
-    height: 45px;
+    height: 42px;
     text-align: center;
     padding: 12px 16px;
     border: 0;
     border-radius: 999px;
     color: #7a3c00;
     font-weight: 800;
-    background: linear-gradient(180deg, #fff1b6, #ffd86b);
-    box-shadow: 0 8px 18px rgba(0, 0, 0, .22);
+    background: #FA6725;
+    color: #FFFFFF;
+    font-size: 14px;
+    font-weight: 500;
 }
 
 .btn-link {
@@ -935,5 +1003,6 @@ onMounted(() => {
     color: #fff;
     font-weight: 400;
     font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
 }
 </style>

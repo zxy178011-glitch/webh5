@@ -21,7 +21,7 @@
         <div class="page-content">
             <!-- 时间轴 -->
             <div class="timeline">
-                <!-- 第一步：已完成 - 提现申请 -->
+                <!-- 第一步:已完成 - 提现申请 -->
                 <div class="timeline-item completed">
                     <div class="timeline-left">
                         <div class="dot filled"></div>
@@ -33,7 +33,7 @@
                     </div>
                 </div>
 
-                <!-- 第二步：处理中 -->
+                <!-- 第二步:处理中 -->
                 <div class="timeline-item processing-step">
                     <div class="timeline-left">
                         <div :class="['dot', processingDotClass]"></div>
@@ -47,7 +47,7 @@
                                 <div v-if="currentStatus == 3" class="step-time">
                                     审核未通过
                                 </div>
-                                <div v-else class="step-time">提现高峰期时，5个工作日内到账</div>
+                                <div v-else class="step-time">提现高峰期时,5个工作日内到账</div>
                             </div>
                             <div class="step-desc">
                                 <div v-if="currentStatus == 3" class="view-reason" @click="showReasonDialog">
@@ -59,7 +59,7 @@
                     </div>
                 </div>
 
-                <!-- 第三步：去微信/支付宝确认收款 -->
+                <!-- 第三步:去微信/支付宝确认收款 -->
                 <div :class="['timeline-item', wechatAuthorizeStepClass]" v-if="isWechat">
                     <div class="timeline-left">
                         <div :class="['dot', wechatAuthorizeDotClass]"></div>
@@ -76,8 +76,9 @@
                             <!-- 去确认收款按钮 -->
                             <div class="authorize-button-wrapper">
                                 <button :class="['authorize-button', authorizeButtonOpacityClass]"
-                                    @click="goToWechatAuthorize">
-                                    <span v-if="isAuthorizeConfirmed">已确认</span>
+                                    :disabled="authorizeLoading" @click="goToWechatAuthorize">
+                                    <van-loading v-if="authorizeLoading" size="16" color="#fff" />
+                                    <span v-else-if="isAuthorizeConfirmed">已确认</span>
                                     <span v-else>确认收款</span>
                                 </button>
                             </div>
@@ -85,7 +86,7 @@
                     </div>
                 </div>
 
-                <!-- 第四步：到账结果 -->
+                <!-- 第四步:到账结果 -->
                 <div :class="['timeline-item', resultStepClass]">
                     <div class="timeline-left">
                         <div :class="['dot', resultDotClass]"></div>
@@ -133,10 +134,13 @@
 
 <script setup lang="ts" name="WithdrawProgress">
 import { ref, onMounted, computed } from 'vue'
+import { showLoadingToast, closeToast, showToast } from 'vant'
 import router from '../../router/index'
 import { useRoute } from 'vue-router'
 import { GetByIdAsync, GetbillIdData, getByOutBillNoAsync, DrawCashRecordDto } from '@/api/RevenueRecord/withdrawProgressapi'
 import { beginPageView, addOnClick } from '@/utils/YMDataH5Bridge'
+ 
+
 // 提现状态常量
 const WITHDRAW_STATUS = {
     PROCESSING: 1,  // 提现中(处理中)
@@ -146,11 +150,13 @@ const WITHDRAW_STATUS = {
     WAIT_AUTHORIZE: 5,  // 系统审核成功
 } as const
 
+ 
 const dataObj = { states: 0, page: 'WithdrawProgress', value: '', type: '', key: '' }
 const route = useRoute()
 const data = ref<DrawCashRecordDto | null>(null)
 const Id = ref('');
 const showReason = ref(false)
+const authorizeLoading = ref(false)  // 添加授权loading状态
 
 // 当前提现状态 - 从数据中获取
 const currentStatus = computed(() => data.value?.drawCashStatus ?? WITHDRAW_STATUS.WAIT_AUTHORIZE)
@@ -168,7 +174,6 @@ const pageTopClass = computed(() =>
 
 // 是否显示状态卡片
 const showStatusCard = computed(() =>
-
     isCompleted.value || isFailed.value
 )
 
@@ -205,6 +210,7 @@ const platformIconMax = computed(() => {
     }
     return '/img/MyEarnings/RevenueRecord/WithdrawProgress/wechatMax.png' // 默认微信
 })
+
 const platformIconmin = computed(() => {
     if (isWechat.value) {
         return '/img/MyEarnings/RevenueRecord/WithdrawProgress/wechatMin.png'
@@ -214,6 +220,7 @@ const platformIconmin = computed(() => {
     }
     return '/img/MyEarnings/RevenueRecord/WithdrawProgress/wechatMin.png' // 默认微信
 })
+
 /**
  * 获取状态卡片标题
  */
@@ -326,27 +333,67 @@ const showReasonDialog = () => {
 /**
  * 去微信/支付宝确认收款
  */
-const goToWechatAuthorize = () => {
+const goToWechatAuthorize = async () => {
     if (!isWaitAuthorize.value) {
         return;
     }
-    if (data.value?.billId) {
-        //友盟数据埋点-用户点击时
-        addOnClick({ taskId: 0, pageName: '点击确认收款时' });
-        GetbillIdData({ BillId: data.value.billId }).then((res => {
-            dataObj.key = 'wechatOpenBusiness';
-            dataObj.type = 'wechatOpenBusiness';
-            dataObj.page = 'wechatOpenBusiness';
-            var packageStr = 'mchId=' + res.mchId
-                + '&appId=' + res.appId
-                + '&package=' + encodeURIComponent(res.package);
 
-            dataObj.value = packageStr;
-            (window as any).H5Bridge?.closePage?.(dataObj)
-        }))
+    if (!data.value?.id) {
+        showToast({
+            message: '操作异常，请联系管理员',
+            position: 'top'
+        })
+        return;
+    }
 
-    } else {
-        alert('操作异常请联系管理员')
+    // 防止重复点击
+    if (authorizeLoading.value) {
+        return;
+    }
+
+    try {
+        // 显示 loading
+        authorizeLoading.value = true
+        showLoadingToast({
+            message: '加载中...',
+            forbidClick: true,
+            duration: 0
+        })
+
+        // 友盟数据埋点-用户点击时
+        addOnClick({ taskId: 0, pageName: '点击确认收款时' })
+
+        // 调用接口
+        const res = await GetbillIdData({ id: data.value.id })
+
+        // 构建参数
+        dataObj.key = 'wechatOpenBusiness'
+        dataObj.type = 'wechatOpenBusiness'
+        dataObj.page = 'wechatOpenBusiness'
+        const packageStr = 'mchId=' + res.mchId
+            + '&appId=' + res.appId
+            + '&package=' + encodeURIComponent(res.package)
+
+        dataObj.value = packageStr
+
+        // 关闭 loading
+        closeToast()
+
+            // 调用原生方法
+            ; (window as any).H5Bridge?.closePage?.(dataObj)
+
+    } catch (error) {
+        console.error('确认收款失败:', error)
+
+        // 显示错误提示
+        showToast({
+            message: '网络异常，请稍后重试',
+            position: 'top'
+        })
+    } finally {
+        // 无论成功失败都要关闭 loading 和重置状态
+        closeToast()
+        authorizeLoading.value = false
     }
 }
 
@@ -371,11 +418,11 @@ onMounted(() => {
     beginPageView('1', '展示处理进度时')
     try {   //  监听 Flutter 调用
         window.H5Bridge.on('pageRefresh', (datas) => {
-            console.log('qrsk回调监听', datas);
+            //  console.log('qrsk回调监听', datas);
             if (datas.businessType == 'wechatOpenBusiness') {
                 //微信授权成功刷新状态
-                if (data.value?.billId) {
-                    getByOutBillNoAsync({ BillId: data.value.billId }).then((res => {
+                if (data.value?.id) {
+                    getByOutBillNoAsync({ id: data.value.id }).then((res => {
                         getDate();
                     }));
                 }
@@ -487,7 +534,6 @@ const goToEarn = () => {
 .page-content {
     padding: 0;
     width: 100%;
-
 }
 
 /* ========== 状态卡片 ========== */
@@ -506,9 +552,6 @@ const goToEarn = () => {
         justify-content: center;
         gap: 8px;
         margin-bottom: 8px;
-
-
-
 
         .status-title {
             font-size: 16px;
@@ -653,7 +696,6 @@ const goToEarn = () => {
 .timeline-right {
     flex: 1;
     padding-top: 0;
-
 }
 
 .step-content {
@@ -675,10 +717,6 @@ const goToEarn = () => {
 }
 
 .step-title-row {
-    // display: flex;
-    // align-items: center;
-    // gap: 6px;
-
     .step-title {
         margin-bottom: 0;
     }
@@ -711,7 +749,6 @@ const goToEarn = () => {
     width: 66px;
     height: 30px;
     angle: 0 deg;
-
     top: 412px;
     left: 304px;
     border-radius: 110px;
@@ -719,6 +756,19 @@ const goToEarn = () => {
     font-size: 12px;
     color: #ffffff;
     font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    :deep(.van-loading) {
+        display: inline-block;
+    }
 }
 
 /* 结果行 */
@@ -784,16 +834,6 @@ const goToEarn = () => {
         color: #323233;
         font-weight: 400;
     }
-}
-
-.timeline-item.pending {
-    // .step-title {
-    //     color: #c8c9cc;
-    // }
-
-    // .step-time {
-    //     color: #7A7A7A;
-    // }
 }
 
 .timeline-item.failed {

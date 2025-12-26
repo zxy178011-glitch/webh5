@@ -7,6 +7,7 @@ export const ACCOUNT_BASE = '/api/DrawCashRecord'
  * 提现进度
  */
 export interface DrawCashRecordDto {
+    id: number
     //提现申请时间
     createDate: string
     //提现审核时间
@@ -37,7 +38,7 @@ export interface ModelDto {
 
 }
 export interface BillDto {
-    BillId: string
+    id: number
 }
 export interface ApiResp<T> {
     status: number;
@@ -78,4 +79,3 @@ export async function getByOutBillNoAsync(data: BillDto): Promise<ApiResp<unknow
     })
 }
 
-getByOutBillNoAsync

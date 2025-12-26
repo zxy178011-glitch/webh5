@@ -12,7 +12,7 @@ setToastDefaultOptions({ duration: 3500 });
 
 
 // VConsole 调试
-//  const vConsole = new VConsole()
+  // const vConsole = new VConsole()
 
 const app = createApp(App)
 app.use(router)

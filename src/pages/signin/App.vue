@@ -26,7 +26,7 @@
                             <!-- 空态 -->
                             <div v-if="viewDays.length === 0"
                                 style="grid-column:1/-1;text-align:center;color:#666;font-size:12px;padding:24px 0;">
-                                暂未获取到签到数据，请稍后重试
+                                暂未获取到签到数据,请稍后重试
                             </div>
 
                             <!-- 7天小卡片 -->
@@ -42,23 +42,27 @@
 
                 <!-- Buttons -->
                 <div class="btn-row">
+                    <!-- 重新签到按钮：只在有断签且今天未操作时显示 -->
                     <button class="btn btn-reset" id="btnReset" type="button" v-show="showReset"
                         :disabled="buttonsDisabled" @click="onReset">
                         重新签到
                     </button>
 
+                    <!-- 续签按钮：只在有断签且今天未操作时显示 -->
                     <button class="btn btn-retro" id="btnRetro" type="button" v-show="showRetro"
                         :disabled="buttonsDisabled" @click="onRetro">
                         看视频续签
                     </button>
 
+                    <!-- 正常签到按钮：今天未操作且无断签时显示 -->
                     <button class="btn btn-normal" id="btnNormal" type="button" v-show="showNormal"
-                        :disabled="normalDisabled" @click="onNormal">
-                        {{ normalText }}
+                        :disabled="buttonsDisabled" @click="onNormal">
+                        立即签到
                     </button>
 
-                    <button class="btn btn-retro-done" id="btnRetroDone" type="button" v-show="showRetroDone" disabled>
-                        今天已续签
+                    <!-- 今天已操作按钮：今天已签到/续签后显示 -->
+                    <button class="btn btn-done" id="btnDone" type="button" v-show="showDone" disabled>
+                        {{ doneText }}
                     </button>
                 </div>
             </div>
@@ -67,7 +71,8 @@
             <button class="outside-close" id="outsideClose" type="button" aria-label="Close"
                 @click="onOutsideClose"></button>
         </div>
-        <!-- 奖励弹窗（轻量 toast） -->
+
+        <!-- 奖励弹窗(轻量 toast) -->
         <div v-if="rewardToast.visible" id="rw-pop" style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
                 background:#2b2b2b;border-radius:14px;padding:18px 22px;z-index:10000;
                 box-shadow:0 10px 30px rgba(0,0,0,.35); color:#fff; text-align:center; min-width:160px;">
@@ -78,30 +83,23 @@
 </template>
 
 <script setup lang="ts">
-/**
- * 老用户续签（Old-user Sign-in）Vue3+TS 版本
- * - 完全等价迁移你给的 H5 逻辑（UI 状态、按钮策略、奖励弹窗、外部关闭等）
- * - 保留 class 名称以复用现有 CSS
- * - 继续调用你的 API：getStatus(taskId), doSignin(mode, taskId)
- */
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { getStatus, doSignin } from '../../api/signin/signinLog'
-import { showSuccessToast, showFailToast, showConfirmDialog, showToast } from 'vant'
+import { showToast } from 'vant'
 import { beginPageView, claim, addOnClick } from '@/utils/YMDataH5Bridge'
-// ============ 参数（支持 URL 传参） ============
+
+// ============ 参数 ============
 const TASK_ID = Number(new URLSearchParams(location.search).get('task') || 10002)
 
 // ============ 通用工具 ============
-const format = (n: number | string) =>
-    // Number.isFinite(+n) ? Number(n).toLocaleString('zh-CN') : '0'
-    n
+const format = (n: number | string) => n
 
 const safeGet = (obj: any, path: string, def?: any) => {
     try { return path.split('.').reduce((o, k) => (o == null ? undefined : (o as any)[k]), obj) ?? def }
     catch { return def }
 }
 
-// ============ 原数据结构（归一化后存这里） ============
+// ============ 数据结构 ============
 type Day = {
     dayIndex: number
     rewardSpark: number
@@ -125,7 +123,7 @@ const state = reactive<Status>({
 
 let lastStatus: Status | null = null
 
-// 归一化（normalize）
+// 归一化
 function normalizeStatus(raw: any): Status {
     const days: Day[] = (safeGet(raw, 'days') ?? safeGet(raw, 'Days') ?? []).map((d: any) => ({
         dayIndex: Number(d.dayIndex ?? d.DayIndex ?? d.index ?? d.Index ?? 0),
@@ -142,11 +140,25 @@ function normalizeStatus(raw: any): Status {
     }
 }
 
-// ============ 计算派生（derive） ============
-// 是否存在续签（retro）机会
+// ============ 计算派生 ============
+// 是否存在续签机会（有retroEligible=true的未完成日期）
 const hasRetro = computed(() => state.days.some(d => d.retroEligible && !d.completed))
 
-// 明日项（tomorrow entry）
+// 今天的金额
+const todayAmount = computed(() => {
+    const d = state.days.find(x => x.isToday)
+    return d ? (Number(d.rewardSpark) || 0) : 0
+})
+
+// 续签金额（最早的未完成且retroEligible=true的日期）
+const retroAmount = computed(() => {
+    const cand = state.days.filter(x => x.retroEligible && !x.completed)
+    if (!cand.length) return 0
+    const oldest = cand.reduce((m, x) => Number(x.dayIndex) < Number(m.dayIndex) ? x : m, cand[0])
+    return Number(oldest.rewardSpark) || 0
+})
+
+// 明日金额（下一个待签的）
 function getTomorrowEntry(s: Status) {
     const days = s.days || []
     const nextIdx = Number(s.nextPendingDayIndex || 0)
@@ -156,29 +168,20 @@ function getTomorrowEntry(s: Status) {
     return d || null
 }
 
-const todayAmount = computed(() => {
-    const d = state.days.find(x => x.isToday)
-    return d ? (Number(d.rewardSpark) || 0) : 0
-})
-
-const retroAmount = computed(() => {
-    const cand = state.days.filter(x => x.retroEligible && !x.completed)
-    if (!cand.length) return 0
-    const oldest = cand.reduce((m, x) => Number(x.dayIndex) < Number(m.dayIndex) ? x : m, cand[0])
-    return Number(oldest.rewardSpark) || 0
-})
-
 const tomorrowEntry = computed(() => getTomorrowEntry(state))
 const tomorrowAmount = computed(() => tomorrowEntry.value ? Number(tomorrowEntry.value.rewardSpark) || 0 : 0)
 
-// Header/Tag/Amount 区域
+// ============ Header/Tag/Amount 区域 ============
 const hdrTitleHTML = computed(() => {
     if (state.signedToday) {
+        // 今天已操作，显示明天的
         return `明日签到可领取 <span class="num" style="color:#F05632;font-weight:900;">${format(tomorrowAmount.value)}</span> 火花`
     } else if (hasRetro.value) {
+        // 有断签，显示续签提示
         return '恭喜获得续签特权'
     } else {
-        return `今天签到可领取 <span class="num" style="color:#F05632;font-weight:900;">${format(todayAmount.value)}</span> 火花`
+        // 正常签到
+        return `今日签到可领 <span class="num" style="color:#F05632;font-weight:900;">${format(todayAmount.value)}</span> 火花`
     }
 })
 
@@ -205,56 +208,51 @@ const amountBig = computed(() => {
     return format(todayAmount.value)
 })
 
-// 小卡片视图数据（与原逻辑一致）
+// ============ 小卡片视图数据 ============
 const viewDays = computed(() => {
     const signedToday = state.signedToday
 
-    // 检查列表中是否存在可续签候选（retroEligible=true）
-    const anyRetroEligible = state.days.some(d => d.retroEligible === true)
-
+    // 找出可续签的日期索引（最早的retroEligible=true且未完成）
     const retroCands = state.days.filter(d => d.retroEligible && !d.completed)
-    const activeRetroIndex = (!signedToday && retroCands.length)
-        ? Math.min(...retroCands.map(x => Number(x.dayIndex))) : -1
-    const tmrIdx = signedToday && tomorrowEntry.value ? Number(tomorrowEntry.value.dayIndex) : -1
+    const activeRetroIndex = retroCands.length
+        ? Math.min(...retroCands.map(x => Number(x.dayIndex)))
+        : -1
+
+    // 找出明天的索引（今天已签到时，下一个未完成的）
+    const tomorrowIndex = signedToday && tomorrowEntry.value
+        ? Number(tomorrowEntry.value.dayIndex)
+        : -1
 
     return state.days.map(d => {
-        const isSeventh = Number(d.dayIndex) === 7
         const isCompleted = !!d.completed
         const isActiveRetro = Number(d.dayIndex) === activeRetroIndex
-        const isTomorrow = signedToday && Number(d.dayIndex) === tmrIdx
+        const isToday = !signedToday && !hasRetro.value && !!d.isToday
+        const isTomorrow = signedToday && Number(d.dayIndex) === tomorrowIndex
 
-        // 如果列表中存在任何 retroEligible=true 的项，则禁止显示 today
-        const showToday = !anyRetroEligible && !signedToday && !!d.isToday
-
+        // 卡片样式
         const cardClass = {
-            'done': !!isCompleted,
-            'today': !!showToday, // 若 anyRetroEligible 为 true，则一定是 false
-            'active': !!(!signedToday && hasRetro.value && isActiveRetro),
-            'tomorrow': !!isTomorrow,
-            'pulse': !!isTomorrow // 明日高亮（pulse 动画由 CSS 控制）
-        }
-        console.log('cardClass', cardClass)
-        // label 文案
-        let labelText = `第${d.dayIndex}天`
-        if (signedToday) {
-            if (isCompleted) labelText = '已领取'
-            else if (isTomorrow) labelText = '明天'
-        } else if (hasRetro.value) {
-            if (isCompleted) labelText = '已领取'
-            else if (isActiveRetro) labelText = '可续签'
-        } else {
-            if (isCompleted) labelText = '已领取'
-            else if (d.isToday) labelText = '今天'
+            'done': isCompleted,
+            'today': isToday,           // 今天未操作且无断签
+            'active': isActiveRetro,    // 可续签的高亮
+            'tomorrow': isTomorrow      // 明天高亮
         }
 
-        // amount 显示逻辑（??? 与显式金额）
-        const displayAmount = !!(
-            isSeventh || isTomorrow || d.isToday || isCompleted ||
-            (!signedToday && hasRetro.value && isActiveRetro)
-        )
+        // Label文案
+        let labelText = `第${d.dayIndex}天`
+        if (isCompleted) {
+            labelText = '已领取'
+        } else if (isTomorrow) {
+            labelText = '明天'
+        } else if (isActiveRetro) {
+            labelText = '可续签'
+        } else if (isToday) {
+            labelText = '今天'
+        }
+
+        // Amount显示逻辑：完成的、今天的、明天的、可续签的、第7天 都显示金额
+        const displayAmount = isCompleted || isToday || isActiveRetro || isTomorrow || Number(d.dayIndex) === 7
         const amountText = displayAmount ? format(d.rewardSpark || 0) : '???'
 
-        // 把对象键转为 class 数组（便于绑定）
         const classArr = Object.keys(cardClass).filter(k => (cardClass as any)[k])
 
         return { ...d, labelText, amountText, cardClass: classArr }
@@ -262,20 +260,23 @@ const viewDays = computed(() => {
 })
 
 // ============ 按钮区 ============
-// “明日再来”模式
-const tomorrowOnly = computed(() => state.signedToday)
-//关闭页面通知移动端的数据
-const dataObj = { states: 0, page: 'signin', value: '10002', type: '', key: 'ShowVedioAD' }
-const showReset = computed(() => !tomorrowOnly.value && hasRetro.value)
-const showRetro = computed(() => !tomorrowOnly.value && hasRetro.value)
-const showNormal = computed(() => tomorrowOnly.value || !hasRetro.value)
-const showRetroDone = computed(() => false) // 你原 H5 里是「隐藏或禁用」，这里继续隐藏
+// 今天已操作（已签到或已续签）
+const todayDone = computed(() => state.signedToday)
 
-const normalText = computed(() => tomorrowOnly.value ? '明日再来' : '立即签到')
+// 按钮显示逻辑
+const showReset = computed(() => !todayDone.value && hasRetro.value)  // 有断签且今天未操作
+const showRetro = computed(() => !todayDone.value && hasRetro.value)  // 有断签且今天未操作
+const showNormal = computed(() => !todayDone.value && !hasRetro.value) // 无断签且今天未操作
+const showDone = computed(() => todayDone.value)                       // 今天已操作
+
+const doneText = computed(() => {
+    const count = state.signedCountInCycle
+    return count >= 7 ? '已完成7天签到' : '今天已签到'
+})
+
 const buttonsDisabled = ref(false)
-const normalDisabled = computed(() => buttonsDisabled.value || tomorrowOnly.value)
 
-// Tag 淡出效果（视觉微交互，可选）
+// Tag淡出效果
 const tagFading = ref(false)
 watch(tagText, () => {
     tagFading.value = true
@@ -285,20 +286,21 @@ watch(tagText, () => {
 // ============ 奖励弹窗 ============
 const rewardToast = reactive({ visible: false, amount: 0 })
 let rewardTimer: any = null
+
 function showReward(amount: number) {
     clearTimeout(rewardTimer)
     rewardToast.amount = amount
     rewardToast.visible = true
-    dataObj.states = 1
     rewardTimer = setTimeout(() => (rewardToast.visible = false), 1600)
 }
 
-// 计算奖励差值（与原 H5 逻辑一致）
+// 计算奖励差值
 function findNewlyCompleted(prev: Status | null, curr: Status): Day[] {
     if (!prev?.days || !curr?.days) return []
     const pm = new Map(prev.days.map(d => [Number(d.dayIndex), !!d.completed]))
     return curr.days.filter(d => !!d.completed && pm.get(Number(d.dayIndex)) !== true)
 }
+
 function rewardOf(prev: Status | null, curr: Status): number {
     const newly = findNewlyCompleted(prev, curr)
     if (newly.length) return Number(newly[0].rewardSpark) || 0
@@ -306,9 +308,11 @@ function rewardOf(prev: Status | null, curr: Status): number {
     return done ? Number(done.rewardSpark) || 0 : 0
 }
 
-// ============ API & 状态应用 ============
+// ============ API ============
 async function apiGetStatus() { return await getStatus(TASK_ID) }
-async function apiDoSignin(mode: 'normal' | 'retro' | 'reset', clientRefId: '') { return await doSignin(mode, TASK_ID, clientRefId) }
+async function apiDoSignin(mode: 'normal' | 'retro' | 'reset', clientRefId: string) {
+    return await doSignin(mode, TASK_ID, clientRefId)
+}
 
 function applyStatus(raw: any) {
     const s = normalizeStatus(raw)
@@ -330,83 +334,86 @@ async function bootstrap() {
 }
 
 // ============ 事件：签到 / 续签 / 重新签到 ============
-async function runAndRefresh(mode: 'normal' | 'retro' | 'reset', clientRefId: '') {
+async function runAndRefresh(mode: 'normal' | 'retro' | 'reset', clientRefId: string) {
     buttonsDisabled.value = true
     const prev = lastStatus
     const modeMap = {
         normal: '签到',
         retro: '续签',
         reset: '重新签到'
-    };
+    }
+
     try {
-        //友盟数据埋点-用户点击时
-        addOnClick({ taskId: 10002, pageName: '点击去' + modeMap[mode] || '' + '时' });
-        //只有需要需要埋点权益领取
-        if (mode == 'retro') {
-            //权益领取数据埋点
-            claim({ task_id: 10002, benefit_type: '机会', claim_quantity: '一次' });
+        // 埋点
+        addOnClick({ taskId: 10002, pageName: '点击去' + modeMap[mode] + '时' })
+
+        if (mode === 'retro') {
+            claim({ task_id: 10002, benefit_type: '机会', claim_quantity: '一次' })
         }
-        await apiDoSignin(mode, clientRefId).then((cur => {
-            applyStatus(cur)
-            // 与原页保持：操作完成后进入“明日再来”视图（通常后端也会返回 SignedToday=true）
-            state.signedToday = true
-            showReward(rewardOf(prev, normalizeStatus(cur)))
-        }))
+
+        const cur = await apiDoSignin(mode, clientRefId)
+        applyStatus(cur)
+
+        // 操作完成后进入"今天已操作"视图
+        state.signedToday = true
+
+        showReward(rewardOf(prev, normalizeStatus(cur)))
     } catch (e: any) {
-        console.log('error', (mode === 'retro' ? '续签失败：' : mode === 'reset' ? '重新签到失败：' : '签到失败：') + (e?.message || e || 'unknown error'))
-        try { const s = await apiGetStatus(); applyStatus(s) } catch { }
+        console.error((mode === 'retro' ? '续签失败：' : mode === 'reset' ? '重新签到失败：' : '签到失败：') + (e?.message || e))
+        try {
+            const s = await apiGetStatus()
+            applyStatus(s)
+        } catch { }
     } finally {
         buttonsDisabled.value = false
     }
 }
 
 const onNormal = () => runAndRefresh('normal', '')
-
 const onReset = () => runAndRefresh('reset', '')
 
-// ============ 外部关闭（带动画 + H5Bridge 通知） ============
+// ============ 外部关闭 ============
 const visible = ref(true)
 const closing = ref(false)
+const dataObj = { states: 0, page: 'signin', value: '10002', type: '', key: 'ShowVedioAD' }
 
 function onOutsideClose() {
     if (state.signedToday) {
-        dataObj.states = 1//今日已完成签到
+        dataObj.states = 1
     }
     dataObj.key = ''
     dataObj.type = ''
     try { (window as any).H5Bridge?.closePopup?.(dataObj) } catch { }
-    //用户浏览签到结束-数据埋点
     beginPageView('2', '展示日常签到弹窗时')
     closing.value = true
     setTimeout(() => { visible.value = false }, 300)
 }
-//看激励视频
+
+// 看激励视频
 function watchVideo() {
-    dataObj.type = 'ShowVedioAD';
-    dataObj.key = 'ShowVedioAD';
-    dataObj.value = '10002';
+    dataObj.type = 'ShowVedioAD'
+    dataObj.key = 'ShowVedioAD'
+    dataObj.value = '10002'
     try { (window as any).H5Bridge?.closePopup?.(dataObj) } catch { }
 }
 
 function onRetro() {
-    watchVideo();
+    watchVideo()
 }
 
 // ============ 启动 ============
 onMounted(() => {
-    bootstrap();
-    //用户浏览签到开始-数据埋点
+    bootstrap()
     beginPageView('1', '展示日常签到弹窗时')
-    //  监听 Flutter 调用
+
+    // 监听 Flutter 调用
     window.H5Bridge.on('pageRefresh', (data) => {
-        // console.log('老用户续签看激励视频返回值', data);
-        // 校验参数
         if (!data?.userId || !data?.transId || !data?.taskId) {
-            console.warn('pageRefresh 数据不完整', data);
-            return;
+            console.warn('pageRefresh 数据不完整', data)
+            return
         }
         if (data.taskId == 10002) {
-            //看完激励视频给予补签操作
+            // 看完激励视频给予补签操作
             runAndRefresh('retro', data.transId)
         } else {
             showToast('hdid不正确')
@@ -414,7 +421,16 @@ onMounted(() => {
     })
 })
 </script>
+
 <style lang="scss" scoped>
+/* 样式保持不变，只添加 btn-done 样式 */
+.btn-done {
+    background: linear-gradient(180deg, #FF7B4A 0%, #F05632 100%);
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* 其他样式保持原样... */
 .overlay {
     position: fixed;
     inset: 0;
@@ -448,12 +464,15 @@ onMounted(() => {
     position: absolute;
     top: -19px;
     left: 60.5%;
-    width: 136px;
-    height: 99px;
-    background-image: url('/img/signin/卡通形象.png');
+    width: 179.5px;
+    height: 97.8px;
+    background-image: url(/img/signin/卡通形象.png);
     background-repeat: no-repeat;
+    background-size: contain;
     pointer-events: none;
-    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .12))
+    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .12));
+    background-position: top center;
+    z-index: 999;
 }
 
 .header {
@@ -467,7 +486,7 @@ onMounted(() => {
     font-size: 18px;
     font-weight: 900;
     color: #2B2B2B;
-    letter-spacing: .5px;
+    // letter-spacing: .5px;
     text-shadow: 1px 1px 0 #fff, -1px 1px 0 #fff, 1px -1px 0 #fff, -1px -1px 0 #fff;
     line-height: 1.25
 }
@@ -533,8 +552,9 @@ onMounted(() => {
     margin-top: 8px;
     margin-bottom: 6px;
     background-image: url('/img/signin/金币堆.png');
+    background-size: 53.87px 45.68px;
     background-repeat: no-repeat;
-    background-position: center;
+    background-position: center center;
     transform: translate3d(0, 30px, 0);
     filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .08))
 }
@@ -602,36 +622,39 @@ onMounted(() => {
 
 .day-mini {
     font-size: 7.19px;
-    width: 33px;
-    height: 45.9px;
-    border-radius: 9px;
+    width: 34px;
+    height: 46px;
+    border-radius: 5.11px;
     background-size: cover;
     background-repeat: no-repeat;
     background-position: center;
-    border: 1px solid rgba(0, 0, 0, .06);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
+    box-shadow: 0px -2.69px 1.79px 0px #00000005 inset;
+
+    box-shadow: 0px 1.79px 3.59px 0px #00000005;
+
+    box-shadow: 1.79px 0px 3.59px 0px #00000005 inset;
+
+    box-shadow: -3.59px 0px 1.79px 0px #00000005 inset;
+
+    // border: 1px solid rgba(0, 0, 0, .06);
+    // box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     transition: transform .12s ease, box-shadow .12s ease, filter .12s ease, background-image .1s ease;
     padding-top: 6px;
-    background-image: url('/public/img/signin/翻卡1.png');
-}
-
-.day-mini:active {
-    transform: translateY(1px) scale(.99);
-    filter: saturate(.98)
+    background-image: url('/img/signin/签到弹窗待领取.png');
 }
 
 .day-mini.today,
 .day-mini.active,
 .day-mini.tomorrow {
-    background-image: url('/public/img/signin/翻卡2.png');
+    background-image: url('/img/signin/签到弹窗可领取.png');
 }
 
 .day-mini.done {
-    background-image: url('/public/img/signin/翻卡.png');
+    background-image: url('/img/signin/红包—不可领取.png');
 }
 
 .dm-amount {
@@ -647,11 +670,11 @@ onMounted(() => {
 .day-mini.active .dm-amount,
 .day-mini.today .dm-amount,
 .day-mini.tomorrow .dm-amount {
-    color: #F05632;
+    color: #FFFFFF;
 }
 
 .day-mini.done .dm-amount {
-    color: #B07B52
+    color: #FFFFFF;
 }
 
 .dm-label-out {
@@ -671,46 +694,6 @@ onMounted(() => {
 
 .day-mini.done+.dm-label-out {
     color: #B07B52
-}
-
-@keyframes pulseGlow {
-    0% {
-        transform: scale(1);
-        box-shadow: 0 0 0 2px rgba(240, 86, 50, .18), 0 6px 14px rgba(0, 0, 0, .25)
-    }
-
-    50% {
-        transform: scale(1.02);
-        box-shadow: 0 0 0 4px rgba(240, 86, 50, .28), 0 10px 18px rgba(0, 0, 0, .35)
-    }
-
-    100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 2px rgba(240, 86, 50, .18), 0 6px 14px rgba(0, 0, 0, .25)
-    }
-}
-
-// .day-mini.tomorrow {
-//     border-color: #F05632;
-//     box-shadow: 0 0 0 2px rgba(240, 86, 50, .18), 0 6px 14px rgba(240, 86, 50, .25)
-// }
-
-// .day-mini.tomorrow+.dm-label-out {
-//     color: #F05632;
-//     position: relative;
-//     padding: 0 6px;
-//     border-radius: 6px;
-//     background: rgba(240, 86, 50, .08)
-// }
-
-// .day-mini.tomorrow.pulse {
-//     animation: pulseGlow 1.6s ease-in-out infinite
-// }
-
-@media (prefers-reduced-motion: reduce) {
-    .day-mini.tomorrow.pulse {
-        animation: none
-    }
 }
 
 .btn-row {
@@ -742,7 +725,6 @@ onMounted(() => {
 }
 
 .btn-reset {
-    // background: linear-gradient(180deg, #FFDFA0 0%, #FFB74D 100%);
     background: #FFFFFF;
     color: #FA6725
 }
@@ -759,12 +741,6 @@ onMounted(() => {
 
 .btn-normal[disabled] {
     opacity: .7;
-    cursor: not-allowed
-}
-
-.btn-retro-done {
-    background: linear-gradient(180deg, #FF7B4A 0%, #F05632 100%);
-    opacity: .9;
     cursor: not-allowed
 }
 

@@ -64,7 +64,7 @@
                 <!-- Bottom -->
                 <div class="bottom">
                     <!--  根据状态切换文案;全开完禁用;冷却中允许点击(走 watchVideo) -->
-                    <button class="but" :disabled="openedCount >= TOTAL_PER_DAY || celebrating" @click="onCtaClick">
+                    <button class="but" :disabled="isButtonDisabled" @click="onCtaClick">
                         {{ ctaText }}
                     </button>
                 </div>
@@ -79,7 +79,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, defineExpose } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { getChestState, postChestState } from '@/api/openTreasureChest/api'
 import { ClaimWatchReward } from '@/api/public/api'
 import { showDialog, showToast } from 'vant'
@@ -121,7 +121,8 @@ const openedCount = ref(0)
 const nextUnlockAt = ref<number | null>(null)
 const amounts = ref<Record<number, number>>({})
 const lastReward = ref(0) // 仅用于头部文案显示
-
+// 用于开启宝箱后的 1.5 秒点击锁定
+const isButtonLocked = ref(false)
 //页面通知移动端的数据
 const dataObj = { states: 0, page: 'openTreasureChest', value: '', type: '', key: '' }
 
@@ -284,31 +285,33 @@ const visibleChests = computed(() => {
 
 /** ===== CTA(按钮)逻辑 ===== */
 const ctaText = computed(() => {
+    // 1. 如果抽完了
     if (openedCount.value >= TOTAL_PER_DAY) return '今日已全部开启'
+
+    // 2. 如果当前可以开启下一个（冷却结束）
     if (canOpen.value) return '点击开启'
 
-    // 冷却中
+    // 3. 冷却中：判断是否领过本轮视频奖励
     if (videoTeaserClaimed.value) {
-        // 已领取视频奖励:显示倒计时
+        // 已领过：显示倒计时
         const nextIndex = openedCount.value + 1
         return `${remainText.value}后可开启第${nextIndex}个宝箱`
     } else {
-        // 未领取:显示看视频提示
+        // 未领过：直接显示看视频文案（不再有延迟判断）
         const val = (videoTeaserMax.value ?? 266)
         return `看视频最高再领取${val.toLocaleString('zh-CN')}火花`
     }
 })
 
 function onCtaClick() {
-    // 防止在"恭喜"展示期间触发操作
-    if (celebrating.value) return
-
     if (openedCount.value >= TOTAL_PER_DAY) return
 
     if (canOpen.value) {
+        // 如果倒计时结束了，去开宝箱
         openChest()
     } else {
-        if (ctaText.value.includes('看视频')) {
+        // 倒计时没结束，且按钮没被禁用，那说明是在“看视频”状态
+        if (!videoTeaserClaimed.value) {
             watchVideo()
         }
     }
@@ -321,50 +324,58 @@ function watchVideo() {
     try { (window as any).H5Bridge?.closePopup?.(dataObj) } catch { }
 }
 
+
+const isButtonDisabled = computed(() => {
+    // 1. 如果今天次数用完了，禁用
+    if (openedCount.value >= TOTAL_PER_DAY) return true
+
+    // 2. 如果开启后正处于 1.5 秒的锁定时间内，禁用
+    if (isButtonLocked.value) return true
+
+    // 3. 如果当前可以开启，不禁用
+    if (canOpen.value) return false
+
+    // 4. 冷却中：已领过视频奖励则禁用，没领过（显示看视频文案）则不禁用
+    return videoTeaserClaimed.value
+})
+
+
 /** ===== 开启逻辑(发奖 & 冷却) ===== */
 async function openChest() {
     if (!canOpen.value || openedCount.value >= TOTAL_PER_DAY) return
 
-    const idx = openedCount.value + 1
-
-    // 前端只更新计数和冷却时间,不生成金额
+    // --- 状态更新 ---
     openedCount.value++
     nextUnlockAt.value = Date.now() + COOLDOWN_SEC * 1000
-    videoTeaserClaimed.value = false // 重置视频领取状态
-
-    //  开启"恭喜"展示
+    videoTeaserClaimed.value = false
     celebrating.value = true
 
-    //通知移动端同步开启时间
-    dataObj.value = remainSec.value.toString();
-    if (remainSec.value > 0) {
-        dataObj.states = 0;
-    } else {
-        dataObj.states = 1;
-    }
+    // 关键点：立即开启点击锁定
+    isButtonLocked.value = true
+
+    // --- 同步移动端及后端 (保持原样) ---
+    dataObj.value = remainSec.value.toString()
+    dataObj.states = remainSec.value > 0 ? 0 : 1
     dataObj.type = 'open'
-    dataObj.key = 'open';
+    dataObj.key = 'open'
     try { (window as any).H5Bridge?.closePopup?.(dataObj) } catch { }
 
-    // 调用后端接口,后端会生成金额
     await postChestState({
         dayKey: dayKey.value || '',
         merge: true,
         state: {
             openedCount: openedCount.value,
             nextUnlockAt: nextUnlockAt.value
-            // 不再传 amounts 和 lastReward,由后端生成
         }
     })
 
-    //勋盟数据埋点-用户点击时
-    addOnClick({ taskId: 10003, pageName: '点击开宝箱得火花时' });
-
-    // 重新加载,获取后端生成的金额
+    addOnClick({ taskId: 10003, pageName: '点击开宝箱得火花时' })
     await load()
 
-    // 延迟关闭恭喜提示,防止立即点击
-    setTimeout(() => { celebrating.value = false }, 500)
+    // --- 需求实现：1.5秒后解除锁定 ---
+    setTimeout(() => {
+        isButtonLocked.value = false
+    }, 1200)
 }
 
 async function ClaimWatchRewards(payload: { transId: string; userId: string; SparkCount?: number }) {
@@ -466,24 +477,23 @@ onUnmounted(() => {
 })
 
 const onOutsideClose = async () => {
+    // 1. 通知移动端（保持原逻辑）
     dataObj.value = remainSec.value.toString();
-    if (remainSec.value > 0) {
-        dataObj.states = 0;
-    } else {
-        dataObj.states = 1;
-    }
+    dataObj.states = remainSec.value > 0 ? 0 : 1;
     dataObj.type = '';
     dataObj.key = '';
-
     try { (window as any).H5Bridge?.closePopup?.(dataObj) } catch { }
-    //  关弹框就结束"恭喜"展示
+
+    // 2. 关键：关闭弹窗时，重置恭喜状态
+    // 这样下次打开进入 onMounted 流程后，UI 会展示普通的列表界面
     celebrating.value = false
-    //用户浏览开宝箱结束-数据埋点
+
+    // 用户浏览埋点
     beginPageView('2', '展示开宝箱弹窗时')
 
+    // 执行关闭动画并隐藏
     setTimeout(() => { showOverlay.value = false }, 500)
 }
-
 /** ===== 暴露给模板用 ===== */
 defineExpose({ TOTAL_PER_DAY })
 </script>
@@ -502,8 +512,8 @@ body {
 }
 
 .c-baoxiao {
-    margin-block-start: 10px;
-    padding: 12px 10px 8px;
+    margin-block-start: 3px;
+    padding: 15px 0px 8px 0px;
 }
 
 .chest-strip {
@@ -514,16 +524,17 @@ body {
 
 .chest-card {
     position: relative;
-    border-radius: 8px;
-    padding: 7.5px 15px;
+    border-radius: 6px;
+    /* padding: 7.5px 15px; */
     text-align: center;
-    box-shadow: 0 2px 8px rgba(250, 103, 37, 0.12);
+    /* box-shadow: 0 2px 8px rgba(250, 103, 37, 0.12); */
+    width: 58px;
+    height: 58px;
 }
 
 /* 当前可开启/计时中的宝箱 */
 .chest-card.current {
     background: linear-gradient(180deg, #FFD67A 0%, #FFF6F1 82.76%);
-    outline: 2px solid rgba(250, 103, 37, 0.12);
 }
 
 /* 已开启的宝箱 */
@@ -538,7 +549,7 @@ body {
 
 /* 未开启的宝箱 */
 .chest-card:not(.current):not(.done) {
-    background: #FFF0F0;
+    background: #FFF6F1;
 }
 
 /* 顶部角标 */
@@ -580,13 +591,13 @@ body {
 
 /* 金额 / 占位 */
 .amount {
-    font-size: 12px;
+    font-size: 11px;
     color: #fa6725;
     font-weight: 600;
 }
 
 .amount.unknown {
-    color: #bbb;
+    color: #FA6725;
 }
 
 /* 进度条区域 */
@@ -613,40 +624,33 @@ body {
     background: linear-gradient(to right,
             #fa6725 0%,
             #fa6725 var(--progress-percent),
-            #f0f0f0 var(--progress-percent),
-            #f0f0f0 100%);
+            rgba(250, 103, 37, 0.3),
+            rgba(250, 103, 37, 0.3));
     transform: translateY(-50%);
-    z-index: 1;
+    z-index: 0;
     --progress-percent: 0%;
 }
 
-.progress-line.progress-1::before {
-    --progress-percent: 33.33%;
-}
-
-.progress-line.progress-2::before {
-    --progress-percent: 66.66%;
-}
-
-.progress-line.progress-3::before {
-    --progress-percent: 100%;
-}
+.progress-line.p-0 { --progress-percent: 0%; }
+.progress-line.p-1 { --progress-percent: 25%; }
+.progress-line.p-2 { --progress-percent: 50%; }
+.progress-line.p-3 { --progress-percent: 75%; }
 
 .progress-dot {
-    inline-size: 10px;
-    block-size: 10px;
+    width: 8px;   /* 缩减尺寸：10px -> 8px */
+    height: 8px;  /* 缩减尺寸：10px -> 8px */
     border-radius: 50%;
-    background: #ddd;
-    transition: all 0.3s ease;
+    background: #FEE2D1;
     position: relative;
-    z-index: 2;
-    margin: 0 auto;
-    border: 2px solid #fff;
+    z-index: 3;
+    margin: 0 auto; /* grid 模式下 margin: 0 auto 即可保证在 1fr 内水平居中 */
+    border: none;   /* 移除边框，保持干净 */
+    transition: background 0.3s;
 }
 
 .progress-dot.active {
     background: #fa6725;
-    box-shadow: 0 0 8px rgba(250, 103, 37, 0.4);
+    /* box-shadow: 0 0 8px rgba(250, 103, 37, 0.4); */
     transform: scale(1.2);
 }
 
@@ -691,12 +695,14 @@ body {
     /* 确保内容不会超出视口 */
     max-inline-size: 100%;
     max-block-size: 100%;
+    /* animation: modalSlideIn .4s ease-out; */
+    width: 310px;
 }
 
 .top-img {
     inline-size: 100%;
     max-inline-size: 360px;
-    block-size: 85px;
+    block-size: 80px;
     /* 给一个固定高度，避免图片加载问题 */
     background: url('/img/openTreasureChest/头部大宝箱.png') no-repeat center top / cover;
     /* 移动端优化 */
@@ -721,11 +727,12 @@ body {
     box-shadow: 0 10px 30px rgba(0, 0, 0, .3);
     position: relative;
     overflow: hidden;
-    animation: modalSlideIn .4s ease-out;
+    /* animation: modalSlideIn .4s ease-out; */
     display: flex;
     flex-direction: column;
     /* 移动端适配 */
     box-sizing: border-box;
+    min-height: 324px;
 }
 
 .header {
@@ -736,17 +743,16 @@ body {
 }
 
 .title {
-    font-family: PingFang SC, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: PingFang SC;
     font-weight: 600;
-    font-size: clamp(16px, 4vw, 18px);
-    /* 响应式字体大小 */
-    line-height: 1.4;
+    font-style: Semibold;
+    font-size: 18px;
+    leading-trim: NONE;
+    line-height: 35px;
     letter-spacing: 0px;
     text-align: center;
-    color: #333;
-    margin-block-end: 8px;
-    /* 添加文字描边效果 */
-    text-shadow: 1px 1px 0 #fff, -1px 1px 0 #fff, 1px -1px 0 #fff, -1px -1px 0 #fff;
+    color: #252525;
+    margin-top: -5px;
 }
 
 .subtitle {
@@ -783,6 +789,8 @@ body {
     border-radius: 6px;
     inline-size: auto;
     padding: 10px;
+    width: 278px;
+    height: 156px;
 }
 
 .c-title {
@@ -793,6 +801,7 @@ body {
     line-height: 100%;
     letter-spacing: 0px;
     color: #999999;
+    padding-top: 8px;
 }
 
 .bottom {
@@ -810,6 +819,8 @@ body {
     border-radius: 100px;
     background: #FA6725;
     color: #FFFFFF;
+    font-size: 14px;
+    font-weight: 500;
 }
 
 /* 动画效果 */

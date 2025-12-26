@@ -24,7 +24,7 @@
                             <template v-if="d.dayIndex === 7">
                                 <div class="special-coin" aria-hidden="true"></div>
                                 <div class="day-reward">
-                                    {{ d.completed ? '已领取 ' : '' }}连续签到7天得 {{ d.rewardSpark }} 火花
+                                    {{ d.completed ? '已领取 ' : '' }}连续签到7天得{{ d.rewardSpark }}火花
                                 </div>
                                 <div class="day-label">
                                     {{ d.completed ? '已领取' : (d.isToday ? '今天' : '待领取') }}
@@ -35,13 +35,13 @@
                             <!-- 普通卡片 -->
                             <template v-else>
                                 <div class="coin-icon">
-                                    <div class="coin-icon1">
+                                    <!-- <div class="coin-icon1">
                                         <div class="coin-icon2"></div>
-                                    </div>
+                                    </div> -->
                                 </div>
                                 <div class="day-reward">{{ d.rewardSpark }} 火花</div>
                                 <div class="day-label">
-                                    {{ d.completed ? '已签到' : (d.isToday ? '今天' : ('第' + d.dayIndex + '天')) }}
+                                    {{ d.completed ? '已领取' : (d.isToday ? '今天' : ('第' + d.dayIndex + '天')) }}
                                 </div>
                                 <div v-if="d.completed" class="check-mark" title="已完成"></div>
                             </template>
@@ -76,7 +76,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { getStatus, doSignin } from '../../api/signin/signinLog' // 直接沿用你现有的 JS API
+import { getStatus, doSignin } from '../../api/signin/signinLog'
 
 // 允许 ?task= 覆盖 TaskID（默认 10001）
 const TASK_ID = Number(new URLSearchParams(location.search).get('task') || 10001)
@@ -238,19 +238,24 @@ onMounted(() => {
 }
 
 .modal {
-    width: 360px;
-    max-width: 90vw;
+    width: 330px;
+    // max-width: 90vw;
     height: 402px;
-    max-height: 90vh;
+    // max-height: 90vh;
     background: linear-gradient(357.85deg, #FFFEF9 1.57%, #FFE14C 97.99%);
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, .3);
-    border: 3px solid rgba(255, 255, 255, .5);
+    //border: 3px solid rgba(255, 255, 255, .5);
     position: relative;
     overflow: hidden;
     animation: modalSlideIn .4s ease-out;
     display: flex;
-    flex-direction: column
+    flex-direction: column;
+    background: url(/img/newSignin/back.png);
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+
 }
 
 .header {
@@ -276,46 +281,64 @@ onMounted(() => {
     font-size: 12px;
     color: #1E1E1E;
     opacity: .8;
-    min-height: 18px
+    min-height: 18px;
+    margin-top: 12px;
 }
 
 .checkin-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    padding: 0 16px;
-    margin: 10px 0 16px;
-    flex: 1;
-    overflow: auto
+    gap: 13px;
+    padding: 1px 4.10256vw;
+    margin: 2.5641vw 0 4.10256vw;
+    /* overflow: auto;  <-- 如果金币还是被裁，请注释掉这一行 */
 }
 
+/* ---  当天签到后去掉边框 --- */
+/* 增加一个复合类选择器，当同时具备 today 和 completed 时去掉边框 */
+.day-card.today.completed {
+    border: none !important;
+}
+
+.day-card.completed {
+    background: #FFF6FC;
+    
+    border-color: #FFB74D;
+    z-index: 99999;
+
+}
+
+
 .day-card {
-    height: 85px;
+    height: 75px;
     background: rgba(255, 255, 255, .9);
     border-radius: 8px;
     padding: 7px 8px 26px;
     text-align: center;
     position: relative;
     transition: all .25s ease;
-    border: 1.2px solid #f0f0f0
+    // border: 1.2px solid #f0f0f0
 }
 
-.day-card.completed {
-    background: rgba(255, 255, 255, .95);
-    border-color: #FFB74D
-}
+// .day-card.completed {
+//     background: rgba(255, 255, 255, .95);
+//     border-color: #FFB74D
+// }
 
 .day-card.today {
-    background: linear-gradient(135deg, #FF8A65 0%, #FF6F00 100%);
+    background: #FFF6FC;
     color: #fff;
-    border: 1.2px solid #f0f0f0;
-    transform: scale(1.03)
+    transform: scale(1.03);
+    border: 0.84px solid #EB9E0A
 }
 
 .coin-icon {
-    width: 28px;
-    height: 28px;
-    background: #FFD478;
+    width: 24px;
+    height: 24px;
+    background-image: url('/img/newSignin/huohua.png');
+    background-size: 24px;
+    background-position: top center;
+    background-repeat: no-repeat;
     border-radius: 50%;
     margin: 0 auto 8px;
     display: flex;
@@ -346,14 +369,26 @@ onMounted(() => {
 }
 
 .day-reward {
-    font-size: 10px;
-    font-weight: 700;
-    color: #E65100;
-    margin-bottom: 8px
+    font-family: PingFang SC;
+    font-weight: 400;
+    font-style: Regular;
+    font-size: 9px;
+    leading-trim: NONE;
+    line-height: 100%;
+    letter-spacing: 0px;
+    text-align: center;
+    color: #252525;
 }
 
 .day-card.today .day-reward {
-    color: #fff
+    color: #252525;
+    font-family: PingFang SC;
+    font-weight: 400;
+    font-style: Regular;
+    font-size: 9px;
+    line-height: 100%;
+    letter-spacing: 0px;
+    text-align: center;
 }
 
 .day-label {
@@ -361,26 +396,52 @@ onMounted(() => {
     bottom: 0;
     left: 0;
     width: 100%;
-    font-size: 10px;
+    font-size: 8.36px;
     font-weight: 600;
     text-align: center;
-    padding: 4px 0;
-    border-radius: 0 0 5px 5px;
+    /* padding: 1.02564vw 0; */
+    border-radius: 0 0 1.28205vw 1.28205vw;
     background: #FFE4D7;
-    color: #999
+    color: #999;
+    height: 19.23px;
+    display: flex;
+    /* justify-items: center; */
+    align-items: center;
+    justify-content: center;
+    color: rgba(245, 77, 44, 0.5);
 }
 
 .day-card.today .day-label {
     background: linear-gradient(96.99deg, #FECE9F -26.88%, #FF765D 82.88%);
-    color: #fff
+    font-family: PingFang SC;
+    font-weight: 600;
+    font-style: Semibold;
+    font-size: 8.36px;
+    leading-trim: NONE;
+    line-height: 8.36px;
+    letter-spacing: 0px;
+    text-align: center;
+    vertical-align: middle;
+    color: #FFFFFF;
 }
 
 .day-card.completed .day-label {
+    font-family: PingFang SC;
+    font-weight: 600;
+    font-style: Semibold;
+    font-size: 8.36px;
+    leading-trim: NONE;
+    // line-height: 8.36px;
+    letter-spacing: 0px;
+    text-align: center;
+    vertical-align: middle;
+    color: rgba(245, 77, 44, 0.5);
     background: #F8EFF5;
-    color: #666
 }
 
 .day-card.special-day {
+    /* 确保容器不裁剪溢出的金币 */
+    overflow: visible !important;
     grid-column: span 2;
     background: rgba(255, 255, 255, .9);
     color: #000;
@@ -391,7 +452,9 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start
+    justify-content: flex-start;
+    /* 提升层级，确保金币能压在其他卡片上方 */
+    z-index: 1;
 }
 
 .day-card.special-day.today {
@@ -404,17 +467,25 @@ onMounted(() => {
     width: 36px;
     height: 32px;
     background-image: url("/img/newSignin/2.png");
-    background-size: cover;
+    background-size: contain;
+    /* 改为 contain 确保显示完整 */
     background-repeat: no-repeat;
     background-position: center;
-    // margin: 0 auto 8px
+
+    /* 核心修改：允许图片向上或向外溢出 */
+    position: relative;
+    top: -5px;
+    /* 向上偏移，压住上方边缘 */
+    flex-shrink: 0;
+    /* 防止被 flex 压缩高度 */
+    z-index: 10;
 }
 
 .day-card.special-day .day-reward {
-    font-size: 10px;
-    font-weight: 800;
-    color: #E65100;
-    margin-top: 5px;
+    font-size: 8.36px;
+    font-weight: 400;
+    color: #252525;
+    // margin-top: 5px;
     margin-bottom: 0 !important;
     text-align: center
 }
@@ -431,7 +502,7 @@ onMounted(() => {
     padding: 4px 0;
     border-radius: 0 0 5px 5px;
     background: #FFE4D7;
-    color: #999;
+    // color: #999;
     text-align: center
 }
 
@@ -442,7 +513,7 @@ onMounted(() => {
 
 .btn-group {
     text-align: center;
-    margin: 6px 16px 16px
+    margin: 16px
 }
 
 .checkin-btn {
@@ -484,27 +555,27 @@ onMounted(() => {
     font-size: 12px;
     color: #1E1E1E;
     opacity: .8;
-    padding-bottom: 12px
+    margin-top: 8px;
 }
 
-.check-mark {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    width: 14px;
-    height: 14px;
-    background: #4CAF50;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 9px;
-    color: #fff
-}
+// .check-mark {
+//     position: absolute;
+//     top: 2px;
+//     right: 2px;
+//     width: 14px;
+//     height: 14px;
+//     background: #4CAF50;
+//     border-radius: 50%;
+//     display: flex;
+//     align-items: center;
+//     justify-content: center;
+//     font-size: 9px;
+//     color: #fff
+// }
 
-.check-mark::before {
-    content: '✓'
-}
+// .check-mark::before {
+//     content: '✓'
+// }
 
 .outside-close {
     background-image: url(/img/public/取消按钮.svg);

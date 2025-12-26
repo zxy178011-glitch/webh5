@@ -5,7 +5,7 @@
         <RulePopup v-model="showRule" title="说明" :rules="ruleList" confirmText="我知道了" />
         <!-- 头图占位（背景图已在容器上），用于控制可视高度 -->
         <div class="hero-space"> <!-- 顶部导航 -->
-            <van-nav-bar fixed placeholder safe-area-inset-top left-arrow :border="false" class="nav-bar"
+            <van-nav-bar  placeholder safe-area-inset-top left-arrow :border="false" class="nav-bar"
                 @click-left="onBack">
                 <template #right>
                     <span class="nav-help" @click="showRulePopup">说明</span>
@@ -107,7 +107,7 @@
             </div>
 
             <!-- 表头 -->
-            <div class="rc-list-head">
+            <div class="rc-list-head" v-if="inviteRecords.length">
                 <div class="c1">头像</div>
                 <div class="c2">昵称</div>
                 <div class="c3">邀请时间</div>
@@ -127,7 +127,10 @@
                     </van-button>
                 </div>
             </div>
-            <div class="rc-empty" v-else>暂无记录</div>
+            <div class="rc-empty" v-else>
+                <div>暂无记录</div>
+                <div>快去邀请好友赚火花吧</div>
+            </div>
         </section>
 
         <div class="safe-bottom" />
@@ -530,11 +533,12 @@ defineExpose({
 
     :deep(.van-nav-bar) {
         background: transparent !important;
+        // margin-top: 46px;
     }
 
-    :deep(.van-nav-bar__content) {
-        height: 90px !important;
-    }
+    // :deep(.van-nav-bar__content) {
+    //     height: 90px !important;
+    // }
 
     :deep(.van-nav-bar__arrow) {
         font-size: 20px !important;
@@ -557,7 +561,8 @@ defineExpose({
    填写邀请码弹窗
    ========================================================================== */
 .invite-popup {
-    width: 300px;
+    width: 270px;
+    height: 191px;
     padding: 16px 16px 14px;
     background: #fff;
     border-radius: 14px;
@@ -565,19 +570,23 @@ defineExpose({
 }
 
 .popup-title {
+    font-family: PingFang SC;
     margin-bottom: 12px;
     text-align: center;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
-    color: rgba(133, 61, 33, 1);
+    color: #252525;
+
 }
 
 .input-wrap {
     margin-bottom: 14px;
-    padding: 10px 12px;
-    background: #f7f7f7;
+    padding: 12px;
+    background: #F5F5F5;
     border: 1px solid rgba(0, 0, 0, 0.02);
     border-radius: 12px;
+    width: 230px;
+    height: 52px;
 
     input {
         width: 100%;
@@ -590,7 +599,8 @@ defineExpose({
         outline: none;
 
         &::placeholder {
-            color: #c8c8c8;
+            color: #8A8A8A;
+
         }
     }
 }
@@ -613,13 +623,18 @@ defineExpose({
 
     &.ghost {
         background: #fff;
-        color: var(--brand-start);
-        border: 1px solid var(--brand-start);
+        color: #FA6725;
+        /* border: 1px solid var(--brand-start); */
+        border: 1px solid #FA6725;
+        width: 109px;
+        height: 42px;
     }
 
     &.primary {
         background: #fa6725;
         color: #fff;
+        width: 109px;
+        height: 42px;
 
         &:disabled {
             opacity: .5;
@@ -1002,7 +1017,7 @@ defineExpose({
             font-size: 13px;
             line-height: 20px;
             letter-spacing: 0;
-            color: #b58a62;
+            color: #853D21;
             text-align: center;
         }
 
@@ -1010,6 +1025,8 @@ defineExpose({
             color: #ff823f;
             font-weight: 800;
             font-size: 20px;
+            display: flex;
+            justify-content: center;
         }
 
         b {
@@ -1047,7 +1064,7 @@ defineExpose({
     align-items: center;
     justify-items: center;
     text-align: center;
-    color: #c09a73;
+    color: #853D21;
     font-family: PingFang SC;
     font-weight: 400;
     font-size: 13px;
@@ -1078,7 +1095,7 @@ defineExpose({
     gap: 0;
     min-height: var(--row-h);
     box-sizing: border-box;
-    border-bottom: 1px solid rgba(236, 209, 179, 0.35);
+    // border-bottom: 1px solid rgba(236, 209, 179, 0.35);
     opacity: .7;
 
     &:last-child {
@@ -1086,8 +1103,8 @@ defineExpose({
     }
 
     .avatar {
-        width: 36px;
-        height: 36px;
+        width: 30px;
+        height: 30px;
         display: block;
         border-radius: 50%;
         object-fit: cover;
@@ -1119,7 +1136,9 @@ defineExpose({
     padding: 16px 0 6px;
     text-align: center;
     font-size: 13px;
-    color: #c09a73;
+    color: rgba(133, 61, 33, 0.6);
+    font-weight: 400;
+    line-height: 20px
 }
 
 /* ============================================================================
