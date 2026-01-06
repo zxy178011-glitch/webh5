@@ -1,11 +1,12 @@
 <template>
     <div class="inviteEarn-page">
-
-
+        <!-- 成功邀请新人提示 -->
+        <TopNotification v-model="showNotification" :normalText="notificationText.normal"
+            :highlightText="notificationText.highlight" :autoHide="true" :duration="3000" />
         <RulePopup v-model="showRule" title="说明" :rules="ruleList" confirmText="我知道了" />
         <!-- 头图占位（背景图已在容器上），用于控制可视高度 -->
         <div class="hero-space"> <!-- 顶部导航 -->
-            <van-nav-bar  placeholder safe-area-inset-top left-arrow :border="false" class="nav-bar"
+            <van-nav-bar placeholder safe-area-inset-top left-arrow :border="false" class="nav-bar"
                 @click-left="onBack">
                 <template #right>
                     <span class="nav-help" @click="showRulePopup">说明</span>
@@ -13,7 +14,7 @@
             </van-nav-bar>
         </div>
         <!--我的邀请码卡片-->
-        <section class="card invite-code-card">
+        <!-- <section class="card invite-code-card">
             <div class="ic-title">
                 <div class="h-side">
                     <span class="h-line long"></span>
@@ -33,10 +34,10 @@
                     <button type="button" class="pill-btn aaa" @click="fillInvite">填邀请码</button>
                 </div>
             </div>
-        </section>
+        </section> -->
         <!-- 填写邀请码弹框 -->
-        <van-popup v-model:show="showInviteDlg" round class="invite-popup" :close-on-click-overlay="false"
-            teleport="body">
+        <van-popup v-model:show="showInviteDlg" :z-index="2001" round class="invite-popup"
+            :close-on-click-overlay="false" teleport="body">
             <div class="popup-title">填写邀请码</div>
 
             <div class="input-wrap">
@@ -50,17 +51,17 @@
                 </button>
             </div>
         </van-popup>
-
-        <!-- 主卡片：每邀1人得xx火花 + 三步说明 + 按钮 + 倒计时 -->
+        <!-- 绑定微信 -->
+        <BindingPopup v-model="showBindingPopup" :method="bindingMethod" customTitle="绑定微信账号"
+            customMessage="当前账号未绑定微信,请先绑定实名微信，才能填写邀请码哦！" @confirm="handleGoBinding" />
+        <!-- 主卡片：邀请好友，轻松赚火花 + 二步说明 + 按钮 + 倒计时 -->
         <section class="card summary-card">
             <div class="headline">
                 <div class="h-side">
                     <span class="h-line long"></span>
                     <span class="h-line short"></span>
                 </div>
-
-                每邀1人得 <span class="num">130000</span> 火花
-
+                邀请好友，轻松赚火花
                 <div class="h-side1">
                     <span class="h-line1 long"></span>
                     <span class="h-line1 short"></span>
@@ -73,6 +74,15 @@
                     <div class="title">{{ s.title }}</div>
                     <div class="desc" v-html="s.desc"></div>
                 </div>
+            </div>
+
+            <div class="action-btn" @click="copyInvite">
+                <div class="btn-text"></div>
+                <div class="btn-subtext">邀请码：{{ inviteCode }}</div>
+            </div>
+
+            <div class="pill-btn" @click="fillInvite">
+                填写邀请码
             </div>
         </section>
 
@@ -116,7 +126,7 @@
             <!-- 列表 -->
             <div class="rc-list" v-if="inviteRecords.length">
                 <div class="rc-row" v-for="r in inviteRecords" :key="r.id">
-                    <img class="avatar" :src="r.avatar || '/img/public/avatar-default.png'" alt="" />
+                    <img class="avatar" :src="getAvatarUrl(r.avatar)" alt="" />
                     <div class="name" :title="r.name">{{ r.name }}</div>
                     <div class="time">{{ formatDotDate(r.invitedAt) }}</div>
                 </div>
@@ -146,13 +156,44 @@
  */
 import { onMounted, onBeforeUnmount, ref, computed } from "vue";
 import { showToast, showLoadingToast } from "vant";
-import { fetchInviteOverview, bindInvite } from "@/api/InviteEarn/api";
+import { fetchInviteOverview, bindInvite, GetReferralRewardTip, TrackEventAsync } from "@/api/InviteEarn/api";
 import RulePopup from '../../components/Popup/RulePopup.vue'
+import { getRulesDataList, RuleItem } from '@/api/InvitationActivityRules/api'
+import {
+    GetAlipayAuthString,
+} from '@/api/MyEarnings/api'
+import { Console } from "console";
+// 控制显示隐藏
+const showNotification = ref(false)
+//  通知文本
+const notificationText = ref({
+    normal: '本次拉新2人获得奖励',
+    highlight: '50万火花'
+})
+// 绑定弹框状态
+const showBindingPopup = ref(false)
+const bindingMethod = ref<string>('wechat')
+function handleGoBinding(method: string) {
+    showBindingPopup.value = false
+    if (method === 'wechat') {
+        dataObj.key = 'wechatAuth';
+        dataObj.value = '';
+        dataObj.type = 'wechatAuth';
+        (window as any).H5Bridge?.closePage?.(dataObj)
+    } else {
+        GetAlipayAuthString().then((res => {
+            dataObj.key = 'alipayAuth';
+            dataObj.value = String(res);
+            dataObj.type = 'alipayAuth';
+            (window as any).H5Bridge?.closePage?.(dataObj)
+        }));
+    }
+}
 
 
 //关闭页面通知移动端的数据
 const dataObj = { states: 0, page: 'InviteEarn', key: '', value: '', type: '' }
-console.log('监听器数量:', window.H5Bridge.listenerCount('pageRefresh'))
+//console.log('监听器数量:', window.H5Bridge.listenerCount('pageRefresh'))
 
 /** 三步说明结构 */
 interface Step {
@@ -175,19 +216,19 @@ interface InviteRecord {
 const campaignId = 10010;      // 活动ID（按需改为从配置/路由获取）
 const pageLimit = 20;      // 每页条数（与后端上限一致）
 
+const wechat = ref(false);
+
 /* ------------------------ 状态：顶部规则弹窗 ------------------------ */
 // —— 规则弹窗 —— 
 // 控制弹框显示/隐藏
 const showRule = ref(false)
-const ruleList = ref([
-    '1.邀新方法：复制邀请码并分享给围炉小说新用户，好友通过邀请码成功登录围炉小说，视为完成任务。',
-    '2.本活动中的新用户定义:在参与本活动前，用于登录的手机号和设备从未下载/安装/使用/注册/登录过本产品客户端，且未参与过本产品的其他活动。',
-    '3.新用户好友复制邀请码，成功登录围炉小说APP，即视为您完成邀请任务，您将可领取相应的火花奖励，奖励发放可能存在一定系统延迟。',
-    '4.若发现异常行为（作弊、刷号等），平台有权取消奖励。',
-    '5.本活动与Apple.lnc无关，最终解释权归本平台所有。'
-])
+const ruleList = ref<RuleItem[]>([]);
 
 const showRulePopup = () => {
+    getRulesDataList({ TaskTypeId: 10010 }).then((res => {
+        ruleList.value = res;
+        console.log('ruleList', ruleList)
+    }))
     showRule.value = true
 }
 
@@ -222,9 +263,9 @@ const nextOffset = ref(0);
 
 /* ------------------------ 三步说明（静态） ------------------------ */
 const steps = ref<Step[]>([
-    { id: 1, icon: "/img/InviteEarn/yq.png", title: "邀请好友", desc: "分享口令给“围炉小说”新用户" },
-    { id: 2, icon: "/img/InviteEarn/xz.png", title: "好友下载并注册", desc: "好友通过邀请码登录“围炉小说”" },
-    { id: 3, icon: "/img/InviteEarn/hh.png", title: "获得13万火花", desc: "发放<span class=\"em\">13万</span>火花，可查看火花收益" },
+    { id: 1, icon: "/img/InviteEarn/yq.png", title: "好友下载并登录", desc: "好友下载app并登录围炉小说" },
+    { id: 2, icon: "/img/InviteEarn/xz.png", title: "分享邀请码给好友", desc: "好友填写邀请码并提交" },
+    { id: 3, icon: "/img/InviteEarn/hh.png", title: "获得大额奖励", desc: "每天最高可获得120万火花奖励" },
 ]);
 
 /* ------------------------ 工具函数 ------------------------ */
@@ -232,6 +273,13 @@ const steps = ref<Step[]>([
 const newIdemKey = () =>
     (crypto as any)?.randomUUID?.() ?? `idem_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
+const getAvatarUrl = (avatar: string | null | undefined) => {
+    if (!avatar) return '/img/public/avatar-default.png';
+    // 如果已经是完整URL就直接返回
+    if (avatar.startsWith('http')) return avatar;
+    // 否则拼接域名
+    return `https://client.mishuwenhua.cn/${avatar.replace(/^\//, '')}`;
+};
 /** YYYY.MM.DD */
 const formatDotDate = (d: string | number | Date) => {
     const dt = new Date(d);
@@ -244,8 +292,11 @@ const formatDotDate = (d: string | number | Date) => {
 
 /* ------------------------ 动作：复制邀请码 ------------------------ */
 const copyInvite = async () => {
+
     const text = inviteCode.value || "";
     if (!text) return;
+    //插入用户点击复制邀请码统计
+    await TrackEventAsync({ EventType: 'invite' });
     try {
         // 调用 H5Bridge给移动端传递页面的邀请码
         try {
@@ -253,7 +304,7 @@ const copyInvite = async () => {
             dataObj.key = 'copy';
             dataObj.type = 'copy';
             (window as any).H5Bridge?.closePage?.(dataObj);
-            showToast({ message: '复制成功', duration: 1500 })
+            showToast({ message: '已复制邀请码', duration: 1500, position: 'top' })
         } catch (e: any) {
             showToast(e?.message || "复制失败");
         }
@@ -281,26 +332,63 @@ const submitting = ref(false);
 const submitInvite = async () => {
     if (submitting.value) return;
     if (!canSubmit.value) {
-        showToast({ message: '请输入正确的邀请码', duration: 1500 });
+        showToast({ message: '请输入正确的邀请码', duration: 1500, position: 'top' });
         return;
     }
+    //插入用户点击提交统计
+    await TrackEventAsync({ EventType: 'submit' });
     submitting.value = true;
-    const loading = showLoadingToast({ message: '绑定中...', forbidClick: true, duration: 0 });
+    const loading = showLoadingToast({ message: '绑定中...', forbidClick: true, duration: 0, position: 'top' });
     try {
         const res = await bindInvite({ campaignId, code: inviteInput.value.trim(), idemKey: newIdemKey() });
         loading.close();
-        showToast({ message: res.message, duration: 1800 });
+        showToast({ message: res.message, duration: 1800, position: 'top' });
         showInviteDlg.value = false;
         inviteInput.value = '';
         await fetchOverview(true);
+
     } catch (e: any) {
         loading.close();
-        showToast({ message: e?.message || '网络异常', duration: 2000 });
+        showToast({ message: e?.message || '网络异常', duration: 2000, position: 'top' });
+        if (e?.message == '请先绑定微信后，再填写邀请码') {
+            showInviteDlg.value = false;
+            showBindingPopup.value = true
+        }
     } finally {
         submitting.value = false;
     }
 };
 /* ------------------------ 接口：概览+列表 ------------------------ */
+
+const ReferralRewardTip = async () => {
+    await GetReferralRewardTip().then((res => {
+        if (res?.successCount > 0) {
+            notificationText.value = {
+                normal: `本次拉新${res.successCount}人获得奖励`,
+                highlight: `${res.totalReward}火花`
+            }
+            showNotification.value = true
+        }
+    }));
+};
+/**
+ * 进入页面统计用户拉新进度
+ * @param campaignId 活动配置Id
+ */
+// const VerifyGrantReward = async (campaignId = 10010) => {
+//     VerifyAndGrantReward({
+//         campaignId: campaignId,
+
+//     }).then((res => {
+//         if (res?.successCount > 0) {
+//             notificationText.value = {
+//                 normal: `本次拉新${res.successCount}人获得奖励`,
+//                 highlight: `${res.totalReward}火花`
+//             }
+//             showNotification.value = true
+//         }
+//     }));
+// }
 /**
  * 拉取概览与列表
  * @param reset 是否重置分页并清空旧数据
@@ -320,7 +408,36 @@ const fetchOverview = async (reset = false) => {
             limit: pageLimit,
         });
         const data = res;
+        // if (data.isLimitReached) {
+        //     showToast({
+        //         message: `今日奖励已达领取上线`,
+        //         position: 'top'
+        //     })
+        // }
+        // if (data.globalDailyLimitReached) {
+        //     showToast({
+        //         message: `今日奖励已被瓜分完`,
+        //         position: 'top'
+        //     })
+        // }
+        // 方案3：延迟显示第二个
+        if (data.isLimitReached) {
+            showToast({
+                message: '今日奖励已达领取上限',
+                position: 'top',
+                duration: 2000
+            });
+        }
+        if (data.globalDailyLimitReached) {
+            setTimeout(() => {
+                showToast({
+                    message: '今日奖励已被瓜分完',
+                    position: 'top'
+                });
+            }, data.isLimitReached ? 2200 : 0);
+        }
         // 概览
+        wechat.value = data.wechat ?? false;
         inviteCode.value = data?.inviteCode ?? "";
         invitedCount.value = Number(data?.invitedCount ?? 0);
         incomeWan.value = Number(data?.incomeWan ?? 0);
@@ -376,11 +493,16 @@ const loadMore = async () => {
 onMounted(() => {
     //  监听 Flutter 调用
     window.H5Bridge.on('pageRefresh', (data) => {
-        console.log('拉新人页面的监听')
+        //console.log('拉新人页面的监听')
     })
-
+    //页面曝光统计
+    TrackEventAsync({ EventType: 'pv' });
+    //获取拉新奖励提示
+    ReferralRewardTip();
+    //VerifyGrantReward(10010);
     // 倒计时刷新
     timer = window.setInterval(() => (roundEndsAt.value = roundEndsAt.value), 1000);
+
     // 首屏拉取
     fetchOverview(true);
 });
@@ -393,6 +515,8 @@ onBeforeUnmount(() => {
 function onBack() {
     try {
         dataObj.type = '';
+        dataObj.key = '';
+        dataObj.value = '';
         (window as any).H5Bridge?.closePopup?.(dataObj);
     } catch (e: any) {
         showToast(e?.message || "复制失败");
@@ -407,7 +531,7 @@ const onInvite = () => {
             window.H5Bridge.emit("share", {
                 scene: "invite",
                 title: "邀请你一起领火花",
-                desc: "邀请1人领13万火花，速来~",
+                desc: "邀请好友，轻松赚火花",
                 url: location.href,
             });
             return;
@@ -729,28 +853,29 @@ defineExpose({
         flex-shrink: 0;
     }
 
-    .pill-btn {
-        width: 48px;
-        height: 28px;
-        border: 1px solid #eee;
-        background: #fff;
-        color: #252525;
-        border-radius: 999px;
-        font-size: 12px;
-        line-height: 20px;
-        letter-spacing: 0;
-        text-align: center;
-        font-weight: 600;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, .05);
-    }
 
-    .pill-btn.aaa {
-        z-index: 2;
-        width: 68px;
-        /* 不要随意用 !important */
-        height: 28px;
-    }
 
+    // .pill-btn.aaa {
+    //     z-index: 2;
+    //     width: 68px;
+    //     /* 不要随意用 !important */
+    //     height: 28px;
+    // }
+
+}
+
+.pill-btn {
+    font-family: PingFang SC;
+    font-weight: 400;
+    font-style: Regular;
+    font-size: 13px;
+    leading-trim: NONE;
+    line-height: 20px;
+    letter-spacing: 0px;
+    text-align: center;
+    color: #853D21;
+    text-align: center;
+    padding-bottom: 5px;
 }
 
 /* 极小屏：按钮换行避免挤压邀请码 */
@@ -788,11 +913,11 @@ defineExpose({
         justify-content: center;
         font-family: PingFang SC;
         font-weight: 500;
-        font-size: 18px;
+        font-size: 20px;
         line-height: 100%;
         letter-spacing: 0;
         text-align: center;
-        color: rgba(133, 61, 33, 1);
+        color: #853D21;
 
         /* 线条变量 */
         --line-h: 1.5px;
@@ -856,7 +981,7 @@ defineExpose({
         column-gap: 8px;
         position: relative;
         background: linear-gradient(180deg, #fff4e5 0%, #fffdf8 100%);
-        border: 1px solid rgba(255, 237, 214, 1);
+        border: 1px solid #FFEDD6;
         border-radius: 12px;
     }
 
@@ -885,10 +1010,12 @@ defineExpose({
         }
 
         .title {
+            font-family: PingFang SC;
             font-size: 13px !important;
-            font-weight: 600;
-            color: rgba(133, 61, 33, 1);
+            font-weight: 500;
+            color: #853D21;
             line-height: 18px;
+            white-space: nowrap
         }
 
         .desc {
@@ -906,6 +1033,54 @@ defineExpose({
         .em {
             color: #e37b2a;
             font-weight: 700;
+        }
+    }
+
+    .action-btn {
+        block-size: 48px;
+        inline-size: 245px;
+        background: #FFFFFF;
+        border-radius: 6.66667vw;
+        transition: all 0.2s ease;
+        align-self: center;
+        margin: 16px auto 10px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding-block-start: 0;
+        cursor: pointer;
+        text-align: center;
+        width: 280px;
+        height: 58px;
+        background-image: url(/img/InviteEarn/按钮.png);
+        background-size: 100% 100%;
+        background-position: top center;
+        background-repeat: no-repeat;
+
+        .btn-text {
+            width: 132px !important;
+            height: 20px !important;
+            margin-block-end: 0.51282vw;
+            background-image: url(/img/InviteEarn/按钮文案.png);
+            background-size: 132px 20px;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+
+        .btn-subtext {
+            color: rgba(255, 255, 255, 0.8);
+            font-family: PingFang SC;
+            font-weight: 400;
+            font-style: Regular;
+            font-size: 11px;
+            leading-trim: NONE;
+            // line-height: 20px;
+            margin-bottom: -5px;
+            letter-spacing: 0px;
+            text-align: center;
+            margin-top: 2px;
         }
     }
 }
@@ -947,10 +1122,14 @@ defineExpose({
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
-    font-weight: 600;
+    font-size: 20px;
+    font-weight: 500;
     line-height: 1;
-    color: rgba(133, 61, 33, 1);
+    color: #853D21;
+    font-family: PingFang SC;
+    font-style: Medium;
+
+
 
     --line-h: 1.5px;
     --line-long: 44px;

@@ -97,7 +97,7 @@ import RulePopup from '../../components/Popup/RulePopup.vue'
 import { windowHeight } from 'vant/lib/utils'
 import { it } from 'node:test'
 import { beginPageView } from '@/utils/YMDataH5Bridge'
-
+import { getRulesDataList, RuleItem } from '@/api/InvitationActivityRules/api'
 
 const router = useRouter()
 
@@ -128,11 +128,13 @@ const onClickLeft = async () => {
 // —— 规则弹窗 —— 
 // 控制弹框显示/隐藏
 const showRule = ref(false)
-const ruleList = ref([
-  '1.您可以通过完成本平台内提供的任务来获取火花或现金红包，具体的任务请参见围炉活动规则并以活动页面的指引为准。',
+const ruleList = ref<RuleItem[]>([]);
 
-])
 const showRulePopup = () => {
+  getRulesDataList({ TaskTypeId: 10024 }).then((res => {
+    ruleList.value = res;
+    console.log('ruleList', ruleList)
+  }))
   showRule.value = true
 }
 
@@ -416,7 +418,7 @@ onMounted(() => {
     background: #fff;
     min-height: calc(100vh - 300px);
     border-radius: 0 0 12px 12px; // 底部圆角
-   // box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    // box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
     transition: transform 180ms ease, box-shadow 180ms ease;
     overflow: hidden; // 确保圆角生效
   }

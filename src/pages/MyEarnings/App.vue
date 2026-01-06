@@ -70,7 +70,7 @@
                             {
                                 'highlight': opt.highlight,
                                 'is-selected': selectedIndex === idx,
-                                'is-disabled': isDisabled(opt)
+                                'is-disabled': isDisabled(opt)  //  这里会调用更新后的 isDisabled 方法
                             }
                         ]" @click="onSelect(opt, idx)">
                             <span v-if="opt.badge" class="badge" :class="{ limited: opt.badge === '限时' }">
@@ -91,20 +91,7 @@
                 </div>
             </div>
 
-            <van-popup v-model:show="showBindingPopup" class="custom-pink-popup" round :close-on-click-overlay="true">
-                <div class="popup-wrapper">
-                    <div class="content-top">
-                        <h3 class="pop-title">{{ bindingInfo.title }}</h3>
-                        <div class="pop-message">{{ bindingInfo.message }}</div>
-                    </div>
-                    <div class="content-bottom">
-                        <van-button class="action-btn-main" round block @click="handleGoBinding(bindingMethod)">
-                            {{ bindingMethod === 'wechat' ? '去微信绑定' : '去支付宝绑定' }}
-                        </van-button>
-                    </div>
-                </div>
-                <button class="outside-close-btn" @click="handleCloseBindingPopup"></button>
-            </van-popup>
+            <BindingPopup v-model="showBindingPopup" :method="bindingMethod" @confirm="handleGoBinding" />
 
             <van-popup v-model:show="showAuthPopup" class="custom-pink-popup" round :close-on-click-overlay="true">
                 <div class="popup-wrapper">
@@ -152,7 +139,7 @@ import {
     type WithdrawRequestDto
 } from '@/api/MyEarnings/api'
 import { beginPageView, addOnClick } from '@/utils/YMDataH5Bridge'
-
+import { getRulesDataList, RuleItem } from '@/api/InvitationActivityRules/api'
 const withdrawtips = ref('推荐使用支付宝提现,高效便捷到账快')
 /** 是否已上报开始埋点 */
 const hasReportedStart = ref(false)
@@ -218,6 +205,7 @@ const withdrawOptions = ref<Array<{
     desc: string
     highlight: boolean
     condition: string
+    isDisabled?: boolean
 }>>([])
 
 
@@ -250,20 +238,21 @@ const fetchWithdrawOptions = async () => {
     loading.value = true
     try {
         const options = await getWithdrawOptions()
-        // 映射到前端的数据结构
+        //  映射后端返回的完整数据，包括 isDisabled 状态
         withdrawOptions.value = options.map(opt => ({
             amount: opt.amount,
             badge: opt.badge,
             desc: opt.desc,
             highlight: opt.highlight,
-            condition: opt.condition
+            condition: opt.condition,
+            isDisabled: opt.isDisabled || false  //  同步后端禁用状态
         }))
 
-        // 更新任务状态
+        // 更新任务状态（保持原有逻辑）
         if (options.length > 0) {
             const videoOpt = options.find(o => o.condition === 'video')
             const readOpt = options.find(o => o.condition === 'read')
-            const signinOpt = options.find(o => o.condition === 'signin')
+            const signinOpt = options.find(o => o.condition === 'signin' || o.condition === 'signin_repeatable')
 
             if (videoOpt?.taskStatus) {
                 taskStatus.value.video.completed = videoOpt.taskStatus.completed
@@ -284,6 +273,7 @@ const fetchWithdrawOptions = async () => {
         loading.value = false
     }
 }
+
 
 /**
  * 获取用户绑定状态
@@ -306,7 +296,24 @@ const fetchBindingStatus = async () => {
 /**
  * 判断卡片是否可选:现金不足则不可选
  */
-const isDisabled = (opt: any) => earnings.value.cash < opt.amount
+/**
+ * 判断卡片是否可选
+ * 1. 现金不足则不可选
+ * 2. 后端返回的 isDisabled=true 则不可选（今日已提现或任务未完成）
+ */
+const isDisabled = (opt: any) => {
+    // 余额不足
+    if (earnings.value.cash < opt.amount) {
+        return true
+    }
+
+    // 后端标记为禁用（今日已提现 或 任务未完成）
+    if (opt.isDisabled === true) {
+        return true
+    }
+
+    return false
+}
 
 /**
  * 自动选择第一个可用的提现选项
@@ -487,12 +494,19 @@ const actionBtnText = computed(() => {
     const option = currentSelectedOption.value
     if (!option) return '立即提现'
 
+    //  如果档位被禁用（今日已提现）
+    if (option.isDisabled && option.desc === '今日已提现') {
+        return '今日已提现'
+    }
+
+    // 根据条件类型返回不同文案
     switch (option.condition) {
         case 'video':
             return taskStatus.value.video.completed ? '立即提现' : '去看视频'
         case 'read':
             return taskStatus.value.read.completed ? '立即提现' : '继续阅读'
         case 'signin':
+        case 'signin_repeatable':  //  新增可重复档位
             return taskStatus.value.signin.completed ? '立即提现' : '继续签到'
         case 'normal':
             return '立即提现'
@@ -500,6 +514,7 @@ const actionBtnText = computed(() => {
             return '立即提现'
     }
 })
+
 
 /**
  * 计算按钮副文案
@@ -512,6 +527,12 @@ const actionBtnSubtext = computed(() => {
     const option = currentSelectedOption.value
     if (!option) return ''
 
+    //  如果今日已提现，显示提示
+    if (option.isDisabled && option.desc === '今日已提现') {
+        return '每天只能提现一次'
+    }
+
+    // 根据条件类型返回不同副文案
     switch (option.condition) {
         case 'video':
             if (taskStatus.value.video.completed) return ''
@@ -522,10 +543,16 @@ const actionBtnSubtext = computed(() => {
         case 'signin':
             if (taskStatus.value.signin.completed) return ''
             return `还需连续签到${taskStatus.value.signin.remainingDays}天可提现${option.amount.toFixed(2)}元`
+        case 'signin_repeatable':  //  新增可重复档位
+            if (taskStatus.value.signin.completed) {
+                return '' // 任务已完成，无副文案
+            }
+            return `还需连续签到${taskStatus.value.signin.remainingDays}天可提现${option.amount.toFixed(2)}元`
         default:
             return ''
     }
 })
+
 
 /**
  * 返回上一页
@@ -541,21 +568,14 @@ const onClickLeft = () => {
 
 /** ===== 规则弹窗 ===== */
 const showRule = ref(false)
-const ruleList = ref([
-    '1.本平台提供现金提现功能,可提取到您的支付账户(如微信、支付宝账户等,以页面实际展示为准)。',
-    '2.用户收益达到最低提现金额要求后,可以申请提现。我们将在提现页面内设置固定提现额度(具体金额以页面展示为准),固定提现额度每日仅可择一使用一次,总次数不限。每次提现时您可以选择所需的一档进行提现,仅当前金额超过发起提现的金额才可以申请提现,剩余金额可在下次满足前述提现额度时申请提现。特别而言,我们可能向新用户下发单次小额提现福利(如1元),新人提现额度为单次福利,仅限新用户使用一次。同时,为了给您提供更好的福利提现体验,围炉小说将不时对部分或者全部(新)用户提供临时提现额度或满足一定要求可提现的额度,如用户获得此类额度,使用次数有限制,具体要求、额度及次数限制请以页面展示为准。',
-    '3. 如果用户需要通过支付宝等第三方支付账号提现,需按照要求绑定第三方支付账号并填写提现金额或其他提现所需信息,请确保提供的信息准确无误,以免提现失败。如果用户需要通过银行卡提现,需按照第三方支付机构的页面要求完成实名认证、添加银行卡并填写提现金额。请确保提供的信息准确无误,以免提现失败。',
-    '4.提现一般3~5天内到账(您理解并同意如遇提现高峰或节假日,提现到账时间会延长)。活动高峰期间,由于网络拥堵,用户可能存在短时间内无法提现的情况。平台将尽最大努力及时恢复提现功能,但无需因此承担任何责任。',
-    '5.为保证用户顺利提现,提现需用户按照提现页面规范操作,如用户未按提现要求操作或不符合第三方支付平台的要求等原因导致不能收款(如未做实名认证或提现前与平台账号解绑等),所获得的金币等将无法提现,本平台无需承担任何责任。',
-    '6.若您连续15个白然日未进入任务页面、或连续15个自然日未领取任何活动连续您的所有福利将过期,逾期未提现则视奖励的(任一),那么此前本平台发放给为用户自愿放弃提现的权利,现金账户金额将被清零,平台将不会也无义务给予任何形式的补偿。',
-    '7.未成年人用户应在其监护人的陪同下使用本 APP 并应在征得其监护人的同意后进行,用户均应确保提供的信息准确无误,如因填写信息错误等非本平台原连弃全部金额,平台不承担责任。因导致不能提现/兑换,视为用户自愿放弃全部金额,平台不承担责任。',
-    '8.我们应用先进的人工智能分析您的行为,在提现/兑换过程中,为更好的保护用户账号及相关资产的安全,本平台有权审核您的订单,对您的提现的次数、金额和/或账号的数量进行限制,并随时提高安全校验措施(包括但不限于短信验证、身份验证等手段),如您未能通过安全校验,则将无法提现/兑换,如发现造假或其他不正当手段及舞弊行为,我们有权阻止您使用(填写邀请码、领取金币、提现、获取红包)以及取消您获得的红包。用户应自行承担因此不能提现/兑换所导致的不利后果,本平台对此不承担责任。',
-    '9.用户通过平台举办的活动获得收益或奖励的,平台可能需要为用户代扣代缴税款或办理纳税申报。为履行上述法定义务,平台需依照税务机关实际要求,收集并提供用户实名信息、收益金额等涉税信息和资料。如用户未向平台提供信息或提供错误信息,可能导致平台无法办理,用户应自行申报纳税,由此造成的其他不利后果由用户自行承担。',
-    '10.平台现行有效的《用户协议》《隐私政策》以及日常活动规则(统称为「前述协议」)同样适用。本规则及相关条款与前述协议相冲突的,以本规则为准;本规则未约定的内容,仍以前述协议为准。',
-    '11.在法律法规允许的范围内,平台有权。对本规则进行变动或调整,相关变动或调整将公布在规则页面上,并于公布时即时生效,用户继续参与活动则视为同意并接受变动或者调整后的规则。如果用户拒绝规则的变更或者调整,请放弃参与变更后的活动。'
-])
+const ruleList = ref<RuleItem[]>([]);
+
 
 const showRulePopup = () => {
+    getRulesDataList({ TaskTypeId: 10022 }).then((res => {
+        ruleList.value = res;
+        console.log('ruleList', ruleList)
+    }))
     showRule.value = true
 }
 
@@ -604,10 +624,38 @@ const handleGoRealNameAuth = () => {
  */
 const onSelect = (option: any, idx: number) => {
     if (isDisabled(option)) {
-        showToast({
-            message:'余额少于提现档位',
-            position:'top'
-        })
+        // 根据不同情况显示不同提示
+        if (earnings.value.cash < option.amount) {
+            showToast({
+                message: '余额少于提现档位',
+                position: 'top'
+            })
+        } else if (option.desc === '今日已提现') {
+            showToast({
+                message: '今日已提现，明天再来吧',
+                position: 'top'
+            })
+        } else if (option.desc && option.desc.includes('签到')) {
+            showToast({
+                message: option.desc,
+                position: 'top'
+            })
+        } else if (option.desc && option.desc.includes('阅读')) {
+            showToast({
+                message: option.desc,
+                position: 'top'
+            })
+        } else if (option.desc && option.desc.includes('视频')) {
+            showToast({
+                message: option.desc,
+                position: 'top'
+            })
+        } else {
+            showToast({
+                message: '暂时无法提现该档位',
+                position: 'top'
+            })
+        }
         return
     }
     selectedIndex.value = idx
@@ -629,23 +677,31 @@ const handleActionBtn = () => {
         return
     }
 
-    //验证是否实名
+    const option = currentSelectedOption.value
+    if (!option) return
+
+    //  检查是否今日已提现
+    if (option.isDisabled && option.desc === '今日已提现') {
+        showToast('今日已提现，明天再来吧')
+        return
+    }
+
+    // 验证是否实名
     if (!userBindings.value.isRealNameAuthenticated) {
-        // showToast('请先进行实名认证')
         showAuthPopup.value = true
         return
     }
-    const option = currentSelectedOption.value
-    if (!option) return
-    //友盟数据埋点-用户点击时
-    addOnClick({ taskId: 0, pageName: '点击提现按钮时' });
+
+    // 友盟数据埋点
+    addOnClick({ taskId: 0, pageName: '点击提现按钮时' })
+
     // 根据条件类型处理
     switch (option.condition) {
         case 'video':
             if (taskStatus.value.video.completed) {
                 proceedWithdraw(option.amount, option.condition)
             } else {
-                handleWatchVideo();
+                handleWatchVideo()
             }
             break
         case 'read':
@@ -660,6 +716,13 @@ const handleActionBtn = () => {
                 proceedWithdraw(option.amount, option.condition)
             } else {
                 showToast('请先完成签到任务')
+            }
+            break
+        case 'signin_repeatable':  //  新增可重复档位处理
+            if (taskStatus.value.signin.completed) {
+                proceedWithdraw(option.amount, option.condition)
+            } else {
+                showToast('请先完成连续签到7天任务')
             }
             break
         case 'normal':
@@ -718,15 +781,19 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
                 condition
             }
             await validateWithdraw(params)
-            var refId = '';
-            await createWithdraw(params).then((res => {
-                refId = res.refId;
+            var refId = ''
+            await createWithdraw(params).then((res) => {
+                refId = res.refId
                 showToast('提现申请成功!')
-            }))
+            })
+
+            // 提现成功后刷新数据
             await Promise.all([
-                fetchRevenueRecords(),
-                fetchWithdrawOptions()
+                fetchRevenueRecords(),   // 刷新余额
+                fetchWithdrawOptions()   // 刷新档位列表（会更新今日提现状态）
             ])
+
+            // 重新选择可用档位
             autoSelectFirstAvailableOption()
 
             router.push({

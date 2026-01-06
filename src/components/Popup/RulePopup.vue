@@ -5,9 +5,13 @@
         <div class="rule-popup-content">
             <div class="rule-title">{{ title }}</div>
             <div class="rule-content">
-                <ol>
-                    <li v-for="(item, index) in rules" :key="index" v-html="item"></li>
-                </ol>
+                <!-- 改用 div 替代 ol，支持自定义结构 -->
+                <div class="rule-list">
+                    <div v-for="(item, index) in rules" :key="item.ruleOrder || index"
+                        :class="['rule-item', `level-${item.ruleLevel}`, item.ruleType]">
+                        <div class="rule-text" v-html="item.ruleContent"></div>
+                    </div>
+                </div>
             </div>
             <div class="rule-actions">
                 <button type="button" class="btn primary" @click="handleConfirm">{{ confirmText }}</button>
@@ -19,10 +23,19 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 
+// 规则项接口
+interface RuleItem {
+    ruleOrder: number
+    ruleContent: string
+    ruleLevel: number      // 层级：1, 2, 3...
+    ruleType: string       // 类型：title, content
+    parentId?: number  
+}
+
 interface Props {
     modelValue?: boolean
     title?: string
-    rules?: string[]
+    rules?: RuleItem[]  // 改为对象数组
     confirmText?: string
 }
 
@@ -35,8 +48,7 @@ const props = withDefaults(defineProps<Props>(), {
     modelValue: false,
     title: '活动规则',
     confirmText: '我知道了',
-    rules: () => [
-    ]
+    rules: () => []
 })
 
 const emit = defineEmits<Emits>()
@@ -60,14 +72,9 @@ const handleConfirm = () => {
     border-radius: 14px;
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
 
-    // 移除 hairline 底部边框
     &:deep(.van-hairline--bottom::after) {
         display: none;
     }
-}
-
-:deep(.rule-popup.van-hairline--bottom::after) {
-    display: none;
 }
 
 .rule-title {
@@ -83,31 +90,68 @@ const handleConfirm = () => {
     overflow: auto;
     padding: 6px 2px 10px;
 
-    ol {
-        margin: 0;
-        padding-left: 10px;
-    }
-
-    li {
-        margin: 6px 0;
+    .rule-list {
         font-size: 13px;
         line-height: 20px;
         color: #8b6a4b;
+    }
 
-        // 支持富文本样式
-        b,
-        strong {
-            font-weight: 700;
+    .rule-item {
+        margin: 6px 0;
+
+        // 根据层级添加缩进
+        &.level-1 {
+            padding-left: 0;
+
+            &.title {
+                margin-top: 12px;
+                margin-bottom: 8px;
+                font-weight: 600;
+                font-size: 14px;
+                color: #5a3a2a;
+            }
+        }
+
+        &.level-2 {
+            padding-left: 16px;
+        }
+
+        &.level-3 {
+            padding-left: 32px;
+        }
+
+        &.level-4 {
+            padding-left: 48px;
+        }
+
+        // 标题样式
+        &.title {
+            font-weight: 600;
             color: #5a3a2a;
         }
 
-        em,
-        i {
-            font-style: italic;
+        // 内容样式
+        &.content {
+            // 默认样式
         }
 
-        u {
-            text-decoration: underline;
+        .rule-text {
+
+            // 支持富文本
+            :deep(b),
+            :deep(strong) {
+                font-weight: 700;
+                color: #5a3a2a;
+            }
+
+            :deep(em),
+            :deep(i) {
+                font-style: italic;
+            }
+
+            :deep(u) {
+                text-decoration: underline;
+            }
         }
     }
 }
