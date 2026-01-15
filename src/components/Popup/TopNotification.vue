@@ -119,7 +119,7 @@ defineExpose({
   box-shadow: 0 4px 12px rgba(255, 69, 0, 0.3);
   animation: glow 2s ease-in-out infinite;
   background: linear-gradient(269.26deg, #FFE1DE 1.66%, #FFFFFF 76.52%);
-  border: 1px solid #FFF6EB
+  //border: 1px solid #FFF6EB
 }
 
 .coin-icon {

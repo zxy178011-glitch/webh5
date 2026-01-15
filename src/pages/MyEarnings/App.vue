@@ -80,7 +80,7 @@
                             <div class="value">
                                 {{ opt.amount.toFixed(2) }}<span class="unit">元</span>
                             </div>
-                            <div class="desc" v-if="opt.desc">{{ opt.desc }}</div>
+                            <div class="desc" v-if="opt.desc && opt.amount < 20">{{ opt.desc }}</div>
                         </div>
                     </div>
 
@@ -916,7 +916,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 /* 收益卡片 */
 .earnings-card {
     border-radius: 12px;
-    padding: 20px;
+    padding: 20px 0px;
 }
 
 .earnings-row {
@@ -928,6 +928,7 @@ const confirmWithdraw = (amount: number, methodName: string, condition: string) 
 .earnings-item {
     flex: 1;
     text-align: center;
+    margin-left: 20px;
 
     .label {
         font-family: PingFang SC;

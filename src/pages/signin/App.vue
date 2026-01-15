@@ -512,7 +512,7 @@ onMounted(() => {
     background: linear-gradient(0deg, rgba(255, 255, 255, .8) 42.72%, rgba(252, 224, 236, .56) 114.17%);
     height: 254px;
     border: 1px solid rgba(0, 0, 0, .06);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, .08);
+    // box-shadow: 0 4px 10px rgba(0, 0, 0, .08);
     position: relative;
     z-index: 1;
     display: flex;
@@ -539,7 +539,8 @@ onMounted(() => {
     padding: 5px 12px;
     border-radius: 3px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, .06);
-    transition: opacity .2s ease, color .2s ease, background .2s ease, filter .2s ease
+    transition: opacity .2s ease, color .2s ease, background .2s ease, filter .2s ease;
+    border-top-left-radius: 12px;
 }
 
 .amount-card-top-tag.fading {
@@ -715,7 +716,7 @@ onMounted(() => {
     font-size: 16px;
     font-weight: 900;
     color: #fff;
-    box-shadow: 0 8px 18px rgba(240, 100, 30, .25);
+    // box-shadow: 0 8px 18px rgba(240, 100, 30, .25);
     transition: transform .12s ease, filter .12s ease
 }
 
@@ -766,7 +767,7 @@ onMounted(() => {
     text-align: center;
     border: none;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+    //box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
     transition: background .2s, transform .2s;
     margin: 0;
 }

@@ -302,9 +302,9 @@ onMounted(() => {
 
 .day-card.completed {
     background: #FFF6FC;
-    
+
     border-color: #FFB74D;
-    z-index: 99999;
+    z-index: 2000;
 
 }
 
